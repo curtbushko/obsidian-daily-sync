@@ -1,29 +1,36 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "obsidian-daily-sync",
+	"version": "0.1.0",
+	"description": "Import daily meetings from local .ics calendar files and Google Calendar into your daily notes",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint ."
 	},
 	"keywords": [],
 	"license": "0-BSD",
 	"devDependencies": {
-		"@types/node": "^16.11.6",
+		"@eslint/js": "9.30.1",
+		"@types/node": "^22.0.0",
+		"@vitest/coverage-v8": "^4.0.16",
 		"esbuild": "0.25.5",
 		"eslint-plugin-obsidianmd": "0.1.9",
 		"globals": "14.0.0",
+		"happy-dom": "^20.1.0",
+		"jiti": "2.6.1",
 		"tslib": "2.4.0",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "8.35.1",
-		"@eslint/js": "9.30.1",
-		"jiti": "2.6.1"
+		"vitest": "^4.0.16"
 	},
 	"dependencies": {
+		"node-ical": "^0.23.0",
 		"obsidian": "latest"
 	}
 }

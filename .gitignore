@@ -25,4 +25,7 @@ data.json
 .direnv
 result
 
+# Testing
+coverage
+
 .claude
