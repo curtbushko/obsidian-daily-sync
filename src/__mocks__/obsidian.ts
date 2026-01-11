@@ -302,3 +302,55 @@ export interface Command {
 	checkCallback?: (checking: boolean) => boolean | void;
 	editorCallback?: (editor: Editor, view: MarkdownView) => void;
 }
+
+export interface RequestUrlParam {
+	url: string;
+	method?: string;
+	contentType?: string;
+	body?: string | ArrayBuffer;
+	headers?: Record<string, string>;
+	throw?: boolean;
+}
+
+export interface RequestUrlResponse {
+	status: number;
+	headers: Record<string, string>;
+	arrayBuffer: ArrayBuffer;
+	json: unknown;
+	text: string;
+}
+
+export interface RequestUrlResponsePromise extends Promise<RequestUrlResponse> {
+	arrayBuffer: Promise<ArrayBuffer>;
+	json: Promise<unknown>;
+	text: Promise<string>;
+}
+
+// Global mock for requestUrl
+let mockRequestUrlImplementation: (request: RequestUrlParam | string) => Promise<RequestUrlResponse> =
+	async () => {
+		throw new Error('requestUrl not mocked');
+	};
+
+export function requestUrl(request: RequestUrlParam | string): RequestUrlResponsePromise {
+	const promise = mockRequestUrlImplementation(request) as RequestUrlResponsePromise;
+
+	// Add convenience accessors
+	promise.arrayBuffer = promise.then(r => r.arrayBuffer);
+	promise.json = promise.then(r => r.json);
+	promise.text = promise.then(r => r.text);
+
+	return promise;
+}
+
+// Test helper to mock requestUrl
+export function mockRequestUrl(implementation: (request: RequestUrlParam | string) => Promise<RequestUrlResponse>): void {
+	mockRequestUrlImplementation = implementation;
+}
+
+// Test helper to reset requestUrl mock
+export function resetRequestUrlMock(): void {
+	mockRequestUrlImplementation = async () => {
+		throw new Error('requestUrl not mocked');
+	};
+}

@@ -181,12 +181,12 @@ To find current work:
 ## P03: Phase 03: Calendar Integration - Google Calendar
 
 ### P03.F01: Feature 01: Google Calendar Fetcher
-- [ ] P03.F01.T01: Task 01: **Investigate**: Research Google Calendar shareable link format, HTTP fetch requirements, understand Obsidian's RequestUrl API
-- [ ] P03.F01.T02: Task 02: **Plan**: Design fetcher interface, identify error scenarios (network errors, invalid URLs, 404, timeout), plan retry logic
-- [ ] P03.F01.T03: Task 03: **Test**: Write tests with mocked HTTP responses (success, network errors, invalid URLs, 404, timeout, malformed response)
-- [ ] P03.F01.T04: Task 04: **Implement**: Create Google Calendar fetcher module with proper error handling and timeout
-- [ ] P03.F01.T05: Task 05: **Validate**: Run all tests, verify error handling, run build and lint, check coverage >80%
-- [ ] P03.F01.T06: Task 06: **Finalize**: Refactor for maintainability, document API usage and limitations, commit
+- [x] P03.F01.T01: Task 01: **Investigate**: Research Google Calendar shareable link format, HTTP fetch requirements, understand Obsidian's RequestUrl API
+- [x] P03.F01.T02: Task 02: **Plan**: Design fetcher interface, identify error scenarios (network errors, invalid URLs, 404, timeout), plan retry logic
+- [x] P03.F01.T03: Task 03: **Test**: Write tests with mocked HTTP responses (success, network errors, invalid URLs, 404, timeout, malformed response)
+- [x] P03.F01.T04: Task 04: **Implement**: Create Google Calendar fetcher module with proper error handling and timeout
+- [x] P03.F01.T05: Task 05: **Validate**: Run all tests, verify error handling, run build and lint, check coverage >80%
+- [x] P03.F01.T06: Task 06: **Finalize**: Refactor for maintainability, document API usage and limitations, commit
 
 ### P03.F02: Feature 02: Parse Google Calendar iCal Format
 - [ ] P03.F02.T01: Task 01: **Investigate**: Review Google Calendar iCal format differences from standard ICS, identify event variations (meetings, all-day, recurring)
