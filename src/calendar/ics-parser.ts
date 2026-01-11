@@ -91,6 +91,62 @@ function convertToIcsEvent(event: VEvent): IcsEvent | null {
 }
 
 /**
+ * Checks if two dates are on the same day (ignoring time)
+ */
+function isSameDay(date1: Date, date2: Date): boolean {
+	return date1.getFullYear() === date2.getFullYear() &&
+	       date1.getMonth() === date2.getMonth() &&
+	       date1.getDate() === date2.getDate();
+}
+
+/**
+ * Filters events to only those occurring on a specific date
+ *
+ * @param events - Array of ICS events to filter
+ * @param targetDate - Date to filter for (defaults to today)
+ * @returns Filtered events sorted by start time (all-day events first)
+ *
+ * @example
+ * ```typescript
+ * const allEvents = await parseIcsFile('/path/to/calendar.ics', app);
+ * const todaysMeetings = getTodaysMeetings(allEvents.events);
+ * for (const meeting of todaysMeetings) {
+ *   console.log(`${meeting.summary} at ${meeting.start.toLocaleTimeString()}`);
+ * }
+ * ```
+ */
+export function getTodaysMeetings(events: IcsEvent[], targetDate?: Date): IcsEvent[] {
+	// Default to today if no target date provided
+	const target = targetDate || new Date();
+
+	// Filter events that occur on the target date
+	const filteredEvents = events.filter(event => {
+		// For all-day events, check if the target date falls within the event's range
+		if (event.isAllDay) {
+			// All-day events: check if target date is on the start date
+			return isSameDay(event.start, target);
+		}
+
+		// For regular events, check if start time is on target date
+		return isSameDay(event.start, target);
+	});
+
+	// Sort events: all-day events first, then by start time
+	return filteredEvents.sort((a, b) => {
+		// All-day events come before regular events
+		if (a.isAllDay && !b.isAllDay) {
+			return -1;
+		}
+		if (!a.isAllDay && b.isAllDay) {
+			return 1;
+		}
+
+		// Otherwise, sort by start time
+		return a.start.getTime() - b.start.getTime();
+	});
+}
+
+/**
  * Parses an ICS file and extracts calendar events
  *
  * @param filePath - Absolute path to the ICS file
