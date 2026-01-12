@@ -1,6 +1,10 @@
 /**
  * Mock implementation of Obsidian API for testing
  */
+import momentLib from 'moment';
+
+// Re-export moment as Obsidian does
+export { default as moment } from 'moment';
 
 export class Plugin {
 	app: App;

@@ -33,9 +33,11 @@
             echo "Node version: $(node --version)"
             echo "npm version: $(npm --version)"
             echo ""
+            echo "Installing dependencies..."
+            npm install
+            echo ""
             echo "Quick start:"
             echo "  make help        - Show all available make targets"
-            echo "  make install     - Install dependencies"
             echo "  make dev         - Run development build (watch mode)"
             echo "  make build       - Production build"
             echo "  make test        - Run tests"

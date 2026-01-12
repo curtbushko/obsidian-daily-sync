@@ -22,6 +22,15 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		// Allow moment in devDependencies for testing (Obsidian bundles moment)
+		files: ['package.json'],
+		rules: {
+			'depend/ban-dependencies': ['error', {
+				allowed: ['moment'], // Allow in devDependencies for tests
+			}],
+		},
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",

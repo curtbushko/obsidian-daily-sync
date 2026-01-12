@@ -24,6 +24,7 @@
 		"globals": "14.0.0",
 		"happy-dom": "^20.1.0",
 		"jiti": "2.6.1",
+		"moment": "^2.30.1",
 		"tslib": "2.4.0",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "8.35.1",
@@ -31,6 +32,7 @@
 	},
 	"dependencies": {
 		"node-ical": "^0.23.0",
-		"obsidian": "latest"
+		"obsidian": "latest",
+		"obsidian-daily-notes-interface": "^0.9.4"
 	}
 }
