@@ -3,6 +3,7 @@ import * as ical from 'node-ical';
 import { VEvent } from 'node-ical';
 // eslint-disable-next-line import/no-nodejs-modules
 import { readFile } from 'node:fs/promises';
+import { fetchGoogleCalendar } from './google-calendar-fetcher';
 
 /**
  * Represents a single calendar event from an ICS file
@@ -147,6 +148,69 @@ export function getTodaysMeetings(events: IcsEvent[], targetDate?: Date): IcsEve
 }
 
 /**
+ * Parses iCal content string and extracts calendar events
+ *
+ * @param content - Raw iCal content as string
+ * @returns IcsParseResult with events and optional errors
+ * @throws IcsParseError if content is invalid or cannot be parsed
+ *
+ * @example
+ * ```typescript
+ * const icalContent = 'BEGIN:VCALENDAR...END:VCALENDAR';
+ * const result = parseIcsContent(icalContent);
+ * for (const event of result.events) {
+ *   console.log(`${event.summary}: ${event.start} - ${event.end}`);
+ * }
+ * ```
+ */
+export function parseIcsContent(content: string): IcsParseResult {
+	// Basic validation - check if it looks like an ICS file
+	if (!content || content.trim() === '' || !content.includes('BEGIN:VCALENDAR')) {
+		throw new IcsParseError(
+			'Content is malformed or not a valid ICS format',
+			'INVALID_FORMAT'
+		);
+	}
+
+	try {
+		// Parse the ICS content
+		const parsed = ical.parseICS(content);
+
+		// Extract events
+		const events: IcsEvent[] = [];
+
+		for (const key in parsed) {
+			const component = parsed[key];
+
+			// Only process VEVENT components
+			if (component && isVEvent(component)) {
+				const icsEvent = convertToIcsEvent(component);
+				if (icsEvent) {
+					events.push(icsEvent);
+				}
+			}
+		}
+
+		return {
+			events
+		};
+	} catch (err) {
+		// Handle specific error types
+		if (err instanceof IcsParseError) {
+			throw err;
+		}
+
+		const error = err as Error;
+
+		// Generic parsing error
+		throw new IcsParseError(
+			`Failed to parse ICS content: ${error.message}`,
+			'PARSE_ERROR'
+		);
+	}
+}
+
+/**
  * Parses an ICS file and extracts calendar events
  *
  * @param filePath - Absolute path to the ICS file
@@ -172,35 +236,8 @@ export async function parseIcsFile(filePath: string, app: App): Promise<IcsParse
 		// Read the file contents
 		const fileContent = await readFile(filePath, 'utf-8');
 
-		// Basic validation - check if it looks like an ICS file
-		if (!fileContent.includes('BEGIN:VCALENDAR')) {
-			throw new IcsParseError(
-				'File is malformed or not a valid ICS file',
-				'INVALID_FORMAT'
-			);
-		}
-
-		// Parse the ICS content
-		const parsed = ical.parseICS(fileContent);
-
-		// Extract events
-		const events: IcsEvent[] = [];
-
-		for (const key in parsed) {
-			const component = parsed[key];
-
-			// Only process VEVENT components
-			if (component && isVEvent(component)) {
-				const icsEvent = convertToIcsEvent(component);
-				if (icsEvent) {
-					events.push(icsEvent);
-				}
-			}
-		}
-
-		return {
-			events
-		};
+		// Parse using the core parsing function
+		return parseIcsContent(fileContent);
 	} catch (err) {
 		// Handle specific error types
 		if (err instanceof IcsParseError) {
@@ -230,4 +267,27 @@ export async function parseIcsFile(filePath: string, app: App): Promise<IcsParse
 			'PARSE_ERROR'
 		);
 	}
+}
+
+/**
+ * Fetches and parses a Google Calendar from a shareable iCal link
+ *
+ * @param url - Google Calendar shareable link (must be .ics format)
+ * @returns Promise resolving to IcsParseResult with events
+ * @throws GoogleCalendarFetchError if fetch fails
+ * @throws IcsParseError if parsing fails
+ *
+ * @example
+ * ```typescript
+ * const url = 'https://calendar.google.com/calendar/ical/test@gmail.com/private-abc/basic.ics';
+ * const result = await fetchAndParseGoogleCalendar(url);
+ * console.log(`Found ${result.events.length} events`);
+ * ```
+ */
+export async function fetchAndParseGoogleCalendar(url: string): Promise<IcsParseResult> {
+	// Fetch the Google Calendar iCal content
+	const fetchResult = await fetchGoogleCalendar(url);
+
+	// Parse the iCal content
+	return parseIcsContent(fetchResult.content);
 }

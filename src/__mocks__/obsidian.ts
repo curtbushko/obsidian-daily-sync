@@ -333,14 +333,29 @@ let mockRequestUrlImplementation: (request: RequestUrlParam | string) => Promise
 	};
 
 export function requestUrl(request: RequestUrlParam | string): RequestUrlResponsePromise {
-	const promise = mockRequestUrlImplementation(request) as RequestUrlResponsePromise;
+	// Create a wrapper promise that won't create unhandled rejections
+	const wrappedPromise = (async () => {
+		return await mockRequestUrlImplementation(request);
+	})() as RequestUrlResponsePromise;
 
-	// Add convenience accessors
-	promise.arrayBuffer = promise.then(r => r.arrayBuffer);
-	promise.json = promise.then(r => r.json);
-	promise.text = promise.then(r => r.text);
+	// Add convenience accessors that lazily evaluate
+	Object.defineProperty(wrappedPromise, 'arrayBuffer', {
+		get() {
+			return wrappedPromise.then(r => r.arrayBuffer);
+		}
+	});
+	Object.defineProperty(wrappedPromise, 'json', {
+		get() {
+			return wrappedPromise.then(r => r.json);
+		}
+	});
+	Object.defineProperty(wrappedPromise, 'text', {
+		get() {
+			return wrappedPromise.then(r => r.text);
+		}
+	});
 
-	return promise;
+	return wrappedPromise;
 }
 
 // Test helper to mock requestUrl
