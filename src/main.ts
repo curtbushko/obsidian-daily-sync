@@ -1,6 +1,7 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, DailySyncSettings, DailySyncSettingTab } from './settings';
 import { syncMeetingsToDaily } from './sync/sync-orchestrator';
+import { formatErrorForUser } from './errors/error-handler';
 
 /**
  * Daily Sync Plugin
@@ -24,8 +25,11 @@ export default class DailySyncPlugin extends Plugin {
 					await syncMeetingsToDaily(this.app, this.settings);
 					// TODO: Add user notification in P05.F04
 				} catch (error) {
+					// Format error for user with helpful suggestions
+					const userError = formatErrorForUser(error);
+					console.error('Sync failed:', userError.title, '-', userError.message);
+					console.error('Suggestions:', userError.suggestions);
 					// TODO: Add user notification in P05.F04
-					console.error('Sync failed:', error);
 				}
 			}
 		});
