@@ -1,7 +1,8 @@
-import { Plugin } from 'obsidian';
+import { Plugin, Notice } from 'obsidian';
 import { DEFAULT_SETTINGS, DailySyncSettings, DailySyncSettingTab } from './settings';
 import { syncMeetingsToDaily } from './sync/sync-orchestrator';
 import { formatErrorForUser } from './errors/error-handler';
+import { showSyncNotification } from './notifications/notification-handler';
 
 /**
  * Daily Sync Plugin
@@ -22,14 +23,18 @@ export default class DailySyncPlugin extends Plugin {
 			name: 'Sync meetings to daily note',
 			callback: async () => {
 				try {
-					await syncMeetingsToDaily(this.app, this.settings);
-					// TODO: Add user notification in P05.F04
+					const result = await syncMeetingsToDaily(this.app, this.settings);
+					showSyncNotification(result);
 				} catch (error) {
 					// Format error for user with helpful suggestions
 					const userError = formatErrorForUser(error);
+
+					// Show error notification
+					new Notice(`${userError.title}: ${userError.message}`, 8000);
+
+					// Log detailed error info to console
 					console.error('Sync failed:', userError.title, '-', userError.message);
 					console.error('Suggestions:', userError.suggestions);
-					// TODO: Add user notification in P05.F04
 				}
 			}
 		});

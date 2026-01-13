@@ -247,8 +247,12 @@ export class DropdownComponent {
 }
 
 export class Notice {
-	constructor(message: string, timeout?: number) {
-		// Mock implementation
+	message: string;
+	timeout: number;
+
+	constructor(message: string, timeout = 5000) {
+		this.message = message;
+		this.timeout = timeout;
 	}
 }
 

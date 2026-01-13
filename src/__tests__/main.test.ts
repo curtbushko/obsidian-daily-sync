@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { App, TFile } from '../__mocks__/obsidian';
 import DailySyncPlugin from '../main';
 import * as syncOrchestrator from '../sync/sync-orchestrator';
+import * as notificationHandler from '../notifications/notification-handler';
 
 // Mock obsidian-daily-notes-interface
 vi.mock('obsidian-daily-notes-interface', () => import('../__mocks__/obsidian-daily-notes-interface'));
@@ -139,6 +140,33 @@ describe('DailySyncPlugin', () => {
 
 			// Act & Assert - should not throw
 			await expect(commandCallback?.()).resolves.not.toThrow();
+		});
+
+		it('should show notification on successful sync', async () => {
+			// Arrange
+			const dailyNote = new TFile('2024-01-15.md');
+			const syncResult = {
+				success: true,
+				dailyNote,
+				localCalendar: { enabled: true, success: true, meetingsAdded: 2 },
+				googleCalendar: { enabled: false, success: false, meetingsAdded: 0 }
+			};
+
+			vi.spyOn(syncOrchestrator, 'syncMeetingsToDaily').mockResolvedValue(syncResult);
+			const notificationSpy = vi.spyOn(notificationHandler, 'showSyncNotification');
+
+			let commandCallback: (() => Promise<void>) | undefined;
+			vi.spyOn(plugin, 'addCommand').mockImplementation((command) => {
+				commandCallback = command.callback as (() => Promise<void>);
+			});
+
+			await plugin.onload();
+
+			// Act
+			await commandCallback?.();
+
+			// Assert
+			expect(notificationSpy).toHaveBeenCalledWith(syncResult);
 		});
 
 		it('should handle sync failure gracefully', async () => {

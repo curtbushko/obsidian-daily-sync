@@ -1,0 +1,125 @@
+/**
+ * Notification Handler
+ *
+ * Displays user notifications for sync results using Obsidian's Notice API.
+ * Provides clear, actionable feedback for success, partial success, and failures.
+ */
+import { Notice } from 'obsidian';
+import type { SyncResult } from '../sync/sync-orchestrator';
+
+/**
+ * Shows a notification based on sync result
+ *
+ * Displays appropriate user feedback:
+ * - Full success: Brief message with meeting count
+ * - Partial success: Shows what worked, hints at failure
+ * - No meetings: Brief "no meetings" message
+ * - Complete failure: Error message with console hint
+ *
+ * @param result - The sync operation result
+ *
+ * @example
+ * ```typescript
+ * const result = await syncMeetingsToDaily(app, settings);
+ * showSyncNotification(result);
+ * ```
+ */
+export function showSyncNotification(result: SyncResult): void {
+	// Calculate total meetings
+	const totalMeetings = result.localCalendar.meetingsAdded + result.googleCalendar.meetingsAdded;
+
+	// Full success - both sources worked (if enabled)
+	if (result.success && !hasPartialFailure(result)) {
+		if (totalMeetings === 0) {
+			new Notice('No meetings found for today.', 4000);
+			return;
+		}
+
+		const message = buildSuccessMessage(result, totalMeetings);
+		new Notice(message, 4000);
+		return;
+	}
+
+	// Partial success - one source worked, one failed
+	if (result.success && hasPartialFailure(result)) {
+		const message = buildPartialSuccessMessage(result, totalMeetings);
+		new Notice(message, 6000);
+		return;
+	}
+
+	// Complete failure - all sources failed
+	const message = buildFailureMessage(result);
+	new Notice(message, 8000);
+}
+
+/**
+ * Checks if the result has a partial failure
+ * (one source succeeded, one failed)
+ */
+function hasPartialFailure(result: SyncResult): boolean {
+	const localFailed = result.localCalendar.enabled && !result.localCalendar.success;
+	const googleFailed = result.googleCalendar.enabled && !result.googleCalendar.success;
+	const localSucceeded = result.localCalendar.enabled && result.localCalendar.success;
+	const googleSucceeded = result.googleCalendar.enabled && result.googleCalendar.success;
+
+	return (localFailed && googleSucceeded) || (googleFailed && localSucceeded);
+}
+
+/**
+ * Builds success message for full sync success
+ */
+function buildSuccessMessage(result: SyncResult, totalMeetings: number): string {
+	const meetingWord = totalMeetings === 1 ? 'meeting' : 'meetings';
+
+	// Both sources enabled and succeeded
+	if (result.localCalendar.success && result.googleCalendar.success) {
+		return `✓ Synced ${totalMeetings} ${meetingWord} to daily note.`;
+	}
+
+	// Only local calendar
+	if (result.localCalendar.success) {
+		return `✓ Synced ${totalMeetings} ${meetingWord} from local calendar.`;
+	}
+
+	// Only Google Calendar
+	if (result.googleCalendar.success) {
+		return `✓ Synced ${totalMeetings} ${meetingWord} from Google Calendar.`;
+	}
+
+	// Fallback (shouldn't happen)
+	return `✓ Synced ${totalMeetings} ${meetingWord}.`;
+}
+
+/**
+ * Builds message for partial success
+ * (one source succeeded, one failed)
+ */
+function buildPartialSuccessMessage(result: SyncResult, totalMeetings: number): string {
+	const meetingWord = totalMeetings === 1 ? 'meeting' : 'meetings';
+
+	// Local succeeded, Google failed
+	if (result.localCalendar.success && !result.googleCalendar.success) {
+		return `✓ Synced ${totalMeetings} ${meetingWord} from local calendar. Google Calendar failed - check console for details.`;
+	}
+
+	// Google succeeded, local failed
+	if (result.googleCalendar.success && !result.localCalendar.success) {
+		return `✓ Synced ${totalMeetings} ${meetingWord} from Google Calendar. Local calendar failed - check console for details.`;
+	}
+
+	// Fallback (shouldn't happen)
+	return `Partial sync: ${totalMeetings} ${meetingWord} synced. Check console for details.`;
+}
+
+/**
+ * Builds message for complete failure
+ */
+function buildFailureMessage(result: SyncResult): string {
+	const bothEnabled = result.localCalendar.enabled && result.googleCalendar.enabled;
+
+	if (bothEnabled) {
+		return '✗ Sync failed: Both calendar sources failed. Check console for details.';
+	}
+
+	return '✗ Sync failed. Check console for details.';
+}
