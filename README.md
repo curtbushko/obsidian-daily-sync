@@ -2,7 +2,7 @@
 
 > Import your daily meetings from local calendar files and Google Calendar into your Obsidian daily notes automatically.
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/curtbushko/obsidian-daily-sync/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/curtbushko/obsidian-daily-sync/releases)
 [![License](https://img.shields.io/badge/license-0--BSD-green.svg)](LICENSE)
 
 ## Features

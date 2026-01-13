@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-daily-sync",
 	"name": "Daily Sync",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Import daily meetings from local .ics calendar files and Google Calendar into your daily notes.",
 	"author": "curtbushko",
