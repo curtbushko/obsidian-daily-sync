@@ -1,5 +1,6 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, DailySyncSettings, DailySyncSettingTab } from './settings';
+import { syncMeetingsToDaily } from './sync/sync-orchestrator';
 
 /**
  * Daily Sync Plugin
@@ -14,7 +15,20 @@ export default class DailySyncPlugin extends Plugin {
 		// Add settings tab
 		this.addSettingTab(new DailySyncSettingTab(this.app, this));
 
-		// Command to sync meetings to daily note will be added in later feature
+		// Register sync command
+		this.addCommand({
+			id: 'sync-meetings',
+			name: 'Sync meetings to daily note',
+			callback: async () => {
+				try {
+					await syncMeetingsToDaily(this.app, this.settings);
+					// TODO: Add user notification in P05.F04
+				} catch (error) {
+					// TODO: Add user notification in P05.F04
+					console.error('Sync failed:', error);
+				}
+			}
+		});
 	}
 
 	onunload() {
