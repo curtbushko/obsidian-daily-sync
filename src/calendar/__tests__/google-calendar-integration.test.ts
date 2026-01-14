@@ -120,9 +120,9 @@ END:VCALENDAR`;
 				// Act
 				const result = parseIcsContent(recurringContent);
 
-				// Assert
-				expect(result.events).toHaveLength(1);
-				expect(result.events[0].summary).toBe('Weekly Meeting');
+				// Assert - recurring events are now expanded
+				expect(result.events.length).toBeGreaterThan(1);
+				expect(result.events.every(e => e.summary === 'Weekly Meeting')).toBe(true);
 			});
 
 			it('should handle RRULE with UNTIL in UTC format', () => {
@@ -142,9 +142,9 @@ END:VCALENDAR`;
 				// Act
 				const result = parseIcsContent(recurringContent);
 
-				// Assert
-				expect(result.events).toHaveLength(1);
-				expect(result.events[0].summary).toBe('Daily Standup');
+				// Assert - recurring events are now expanded (daily for ~1 year = ~355 events)
+				expect(result.events.length).toBeGreaterThan(100);
+				expect(result.events.every(e => e.summary === 'Daily Standup')).toBe(true);
 			});
 
 			it('should handle RRULE with UNTIL at end of RRULE line', () => {
@@ -164,9 +164,9 @@ END:VCALENDAR`;
 				// Act
 				const result = parseIcsContent(recurringContent);
 
-				// Assert
-				expect(result.events).toHaveLength(1);
-				expect(result.events[0].summary).toBe('Bi-monthly Review');
+				// Assert - recurring events are now expanded (bi-monthly for ~18 months = ~9 events)
+				expect(result.events.length).toBeGreaterThan(1);
+				expect(result.events.every(e => e.summary === 'Bi-monthly Review')).toBe(true);
 			});
 
 			it('should handle RRULE with UNTIL followed by COUNT', () => {
@@ -186,9 +186,9 @@ END:VCALENDAR`;
 				// Act
 				const result = parseIcsContent(recurringContent);
 
-				// Assert
-				expect(result.events).toHaveLength(1);
-				expect(result.events[0].summary).toBe('Workout Sessions');
+				// Assert - recurring events are now expanded (3x per week for ~1 year)
+				expect(result.events.length).toBeGreaterThan(50);
+				expect(result.events.every(e => e.summary === 'Workout Sessions')).toBe(true);
 			});
 
 			it('should handle RRULE with UNTIL using DATE format (no time)', () => {
@@ -208,9 +208,9 @@ END:VCALENDAR`;
 				// Act
 				const result = parseIcsContent(recurringContent);
 
-				// Assert
-				expect(result.events).toHaveLength(1);
-				expect(result.events[0].summary).toBe('Annual Holiday');
+				// Assert - recurring events are now expanded (yearly, within our 2-year range = ~2 events)
+				expect(result.events.length).toBeGreaterThanOrEqual(1);
+				expect(result.events.every(e => e.summary === 'Annual Holiday')).toBe(true);
 			});
 		});
 

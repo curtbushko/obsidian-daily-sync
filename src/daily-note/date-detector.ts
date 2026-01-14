@@ -9,6 +9,7 @@ import {
 	appHasDailyNotesPluginLoaded,
 	getAllDailyNotes,
 } from 'obsidian-daily-notes-interface';
+import { debugLog, debugError } from '../utils/debug-logger';
 
 // Infer Moment type from the moment function exported by Obsidian
 type Moment = ReturnType<typeof moment>;
@@ -42,14 +43,14 @@ export function getTargetDateForSync(app: App): Moment {
 
 	// Check if Daily Notes plugin is loaded
 	if (!appHasDailyNotesPluginLoaded()) {
-		console.log('Daily Sync - Daily Notes plugin not loaded, using today');
+		debugLog('Daily Notes plugin not loaded, using today');
 		return today;
 	}
 
 	// Get the active file
 	const activeFile = app.workspace.getActiveFile();
 	if (!activeFile) {
-		console.log('Daily Sync - No active file open, using today');
+		debugLog('No active file open, using today');
 		return today;
 	}
 
@@ -75,16 +76,16 @@ export function getTargetDateForSync(app: App): Moment {
 			}
 
 			if (parsedDate.isValid()) {
-				console.log('Daily Sync - Syncing to daily note date:', parsedDate.format('YYYY-MM-DD'));
+				debugLog('Syncing to daily note date:', parsedDate.format('YYYY-MM-DD'));
 				return parsedDate;
 			} else {
-				console.error('Daily Sync - Could not parse date from daily note key:', dateStr);
+				debugError('Could not parse date from daily note key:', dateStr);
 				return today;
 			}
 		}
 	}
 
 	// Active file is not a daily note
-	console.log('Daily Sync - Active file is not a daily note, using today');
+	debugLog('Active file is not a daily note, using today');
 	return today;
 }

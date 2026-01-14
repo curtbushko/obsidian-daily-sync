@@ -82,9 +82,9 @@ To find current work:
 - **P05**: Command & UX (4 features) - ✓ COMPLETED
 - **P06**: Integration Testing & Validation (2 features) - ✓ COMPLETED
 - **P07**: Documentation (2 features) - ✓ COMPLETED
-- **P08**: Enhancements & UX Improvements (4 features)
+- **P08**: Enhancements & UX Improvements (7 features)
 
-**Total**: 8 Phases, 23 Features, 138 Tasks (6 tasks per feature)
+**Total**: 8 Phases, 26 Features, 156 Tasks (6 tasks per feature)
 
 # Implementation Todo List
 
@@ -326,10 +326,34 @@ To find current work:
 - [x] P08.F03.T05: Task 05: **Validate**: Run all tests, manual UI testing of toggles, verify sync behavior, run build and lint
 - [x] P08.F03.T06: Task 06: **Finalize**: Refactor toggle logic, update documentation, commit
 
-### P08.F04: Feature 04: File Browser for Local Calendar Selection
-- [ ] P08.F04.T01: Task 01: **Investigate**: Review Obsidian file suggester API, understand file picker patterns, identify vault vs system file access
-- [ ] P08.F04.T02: Task 02: **Plan**: Design file browser UI component, plan file path validation, define file type filtering (.ics files)
-- [ ] P08.F04.T03: Task 03: **Test**: Write tests for file browser integration (file selection, path validation, cancel action, invalid file types)
-- [ ] P08.F04.T04: Task 04: **Implement**: Add file browser button to settings UI with .ics file filtering and path validation
-- [ ] P08.F04.T05: Task 05: **Validate**: Run all tests, manual UI testing of file browser, verify path persistence, run build and lint
-- [ ] P08.F04.T06: Task 06: **Finalize**: Refactor file browser code, improve UX feedback, update documentation, commit
+### P08.F04: Feature 04: File Browser for Local Calendar Selection ✅
+- [x] P08.F04.T01: Task 01: **Investigate**: Review Obsidian file suggester API, understand file picker patterns, identify vault vs system file access
+- [x] P08.F04.T02: Task 02: **Plan**: Design file browser UI component, plan file path validation, define file type filtering (.ics files)
+- [x] P08.F04.T03: Task 03: **Test**: Write tests for file browser integration (file selection, path validation, cancel action, invalid file types)
+- [x] P08.F04.T04: Task 04: **Implement**: Add file browser button to settings UI with .ics file filtering and path validation
+- [x] P08.F04.T05: Task 05: **Validate**: Run all tests, manual UI testing of file browser, verify path persistence, run build and lint
+- [x] P08.F04.T06: Task 06: **Finalize**: Refactor file browser code, improve UX feedback, update documentation, commit
+
+### P08.F05: Feature 05: Debug Logging Settings Toggle ✅
+- [x] P08.F05.T01: Task 01: **Investigate**: Review Obsidian console logging patterns, understand debug toggle implementation in similar plugins, identify logging points across codebase
+- [x] P08.F05.T02: Task 02: **Plan**: Design debug settings schema (enableDebugLogging boolean), plan toggle UI placement in settings tab, define default state (disabled)
+- [x] P08.F05.T03: Task 03: **Test**: Write tests for debug toggle functionality (toggle on/off, settings persistence, default state verification)
+- [x] P08.F05.T04: Task 04: **Implement**: Add enableDebugLogging toggle to settings interface and settings tab UI
+- [x] P08.F05.T05: Task 05: **Validate**: Run all tests, manual UI testing of toggle, verify settings persistence across restarts, run build and lint
+- [x] P08.F05.T06: Task 06: **Finalize**: Refactor toggle code, update documentation with debug instructions, commit
+
+### P08.F06: Feature 06: Debug Logging Implementation ✓ COMPLETED
+- [x] P08.F06.T01: Task 01: **Investigate**: Identify all key logging points (ICS parsing, Google fetch, meeting extraction, note insertion, sync orchestration), review existing error handling
+- [x] P08.F06.T02: Task 02: **Plan**: Design debug logger utility (respects toggle setting), define log levels/categories, plan log message format with timestamps and context
+- [x] P08.F06.T03: Task 03: **Test**: Write tests for debug logger (logs when enabled, silent when disabled, proper formatting, handles all data types)
+- [x] P08.F06.T04: Task 04: **Implement**: Create debug logger utility and add comprehensive debug logging throughout codebase (calendar parsing, meeting extraction, note operations, errors)
+- [x] P08.F06.T05: Task 05: **Validate**: Run all tests, manual testing with debug enabled (verify useful output), verify no logs when disabled, run build and lint
+- [x] P08.F06.T06: Task 06: **Finalize**: Refactor logging code, ensure consistent log format, document debug output interpretation, commit
+
+### P08.F07: Feature 07: Meeting Ignore Filter
+- [ ] P08.F07.T01: Task 01: **Investigate**: Review current meeting filtering logic, understand where meetings are processed before insertion, identify case sensitivity requirements
+- [ ] P08.F07.T02: Task 02: **Plan**: Design settings schema (localCalendarIgnore, googleCalendarIgnore as comma-separated strings), plan filter logic (case-insensitive partial match on summary), define UI placement
+- [ ] P08.F07.T03: Task 03: **Test**: Write tests for ignore filter (single word match, multiple words, partial match, case insensitivity, empty ignore list, special characters, whitespace handling)
+- [ ] P08.F07.T04: Task 04: **Implement**: Add ignore settings to DailySyncSettings interface, settings UI, and filter meetings before insertion based on ignore phrases
+- [ ] P08.F07.T05: Task 05: **Validate**: Run all tests (>80% coverage), manual testing with various ignore phrases, verify filtered meetings logged in debug mode, run build and lint
+- [ ] P08.F07.T06: Task 06: **Finalize**: Refactor filter logic, add debug logging for ignored meetings, update documentation, commit

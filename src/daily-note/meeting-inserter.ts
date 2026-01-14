@@ -6,6 +6,7 @@
  */
 import { App, TFile } from 'obsidian';
 import type { IcsEvent } from '../calendar/ics-parser';
+import { debugLog, debugError } from '../utils/debug-logger';
 
 /**
  * Error thrown when target section is not found in note
@@ -203,13 +204,13 @@ export async function insertMeetingsIntoNote(
 		// Log duplicate detection
 		const duplicateCount = meetings.length - newMeetings.length;
 		if (duplicateCount > 0) {
-			console.log('Daily Sync - Skipping', duplicateCount, 'duplicate meeting(s) already in note');
+			debugLog('Skipping', duplicateCount, 'duplicate meeting(s) already in note');
 		}
 
 		// If all meetings are duplicates, no need to modify
 		if (newMeetings.length === 0) {
 			if (duplicateCount > 0) {
-				console.log('Daily Sync - All', duplicateCount, 'meeting(s) already exist in "' + sectionName + '" section');
+				debugLog('All', duplicateCount, 'meeting(s) already exist in "' + sectionName + '" section');
 			}
 			return 0;
 		}
@@ -218,7 +219,7 @@ export async function insertMeetingsIntoNote(
 		const formattedMeetings = newMeetings.map(meeting => formatMeeting(meeting));
 
 		// Log what's being inserted
-		console.log('Daily Sync - Inserting', newMeetings.length, 'new meeting(s) into "' + sectionName + '" section');
+		debugLog('Inserting', newMeetings.length, 'new meeting(s) into "' + sectionName + '" section');
 
 		// Insert meetings after the section heading
 		// Find the position to insert (after heading, preserving existing content)
@@ -242,7 +243,7 @@ export async function insertMeetingsIntoNote(
 		return newMeetings.length;
 
 	} catch (error) {
-		console.error(`Daily Sync - Error inserting meetings into ${file.path}:`, error);
+		debugError('Error inserting meetings into', file.path, error);
 		if (error instanceof SectionNotFoundError) {
 			throw error;
 		}

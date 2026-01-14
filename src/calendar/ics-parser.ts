@@ -4,6 +4,7 @@ import { VEvent } from 'node-ical';
 // eslint-disable-next-line import/no-nodejs-modules
 import { readFile } from 'node:fs/promises';
 import { fetchGoogleCalendar } from './google-calendar-fetcher';
+import { debugLog } from '../utils/debug-logger';
 
 /**
  * Represents a single calendar event from an ICS file
@@ -52,6 +53,60 @@ function isVEvent(component: ical.CalendarComponent): component is VEvent {
 }
 
 /**
+ * Checks if a VEvent has a recurrence rule
+ */
+function hasRecurrenceRule(event: VEvent): boolean {
+	return event.rrule !== undefined && event.rrule !== null;
+}
+
+/**
+ * Expands a recurring event into individual occurrences within a date range.
+ *
+ * @param event - The VEvent with an RRULE
+ * @param rangeStart - Start of the date range to expand
+ * @param rangeEnd - End of the date range to expand
+ * @returns Array of IcsEvents for each occurrence
+ */
+function expandRecurringEvent(event: VEvent, rangeStart: Date, rangeEnd: Date): IcsEvent[] {
+	const expandedEvents: IcsEvent[] = [];
+
+	if (!event.rrule) {
+		return expandedEvents;
+	}
+
+	try {
+		// Get occurrences within the date range
+		const occurrences = event.rrule.between(rangeStart, rangeEnd, true);
+
+		// Calculate the duration of the original event
+		const originalStart = event.start;
+		const originalEnd = event.end || new Date(originalStart.getTime() + 60 * 60 * 1000);
+		const duration = originalEnd.getTime() - originalStart.getTime();
+
+		const isAllDay = isAllDayEvent(event);
+		const summary = event.summary || '';
+
+		// Create an IcsEvent for each occurrence
+		for (const occurrence of occurrences) {
+			const occurrenceEnd = new Date(occurrence.getTime() + duration);
+
+			expandedEvents.push({
+				summary,
+				start: occurrence,
+				end: occurrenceEnd,
+				isAllDay
+			});
+		}
+
+		debugLog('Expanded recurring event:', summary, '- found', occurrences.length, 'occurrences in range');
+	} catch (error) {
+		debugLog('Failed to expand recurring event:', event.summary, error);
+	}
+
+	return expandedEvents;
+}
+
+/**
  * Checks if an event is an all-day event
  */
 function isAllDayEvent(event: VEvent): boolean {
@@ -92,12 +147,43 @@ function convertToIcsEvent(event: VEvent): IcsEvent | null {
 }
 
 /**
- * Checks if two dates are on the same day (ignoring time)
+ * Checks if two dates are on the same calendar day in LOCAL timezone.
+ *
+ * We use local timezone because:
+ * - The target date comes from the user's daily note (local context)
+ * - Users expect events to match their local calendar view
  */
 function isSameDay(date1: Date, date2: Date): boolean {
 	return date1.getFullYear() === date2.getFullYear() &&
 	       date1.getMonth() === date2.getMonth() &&
 	       date1.getDate() === date2.getDate();
+}
+
+/**
+ * Checks if an event date falls on the same calendar day as the target date.
+ *
+ * This handles the common case where calendar events are stored in UTC
+ * but we want to match them to a local date. We compare the LOCAL date
+ * components since that's what users see in their calendar apps.
+ *
+ * For all-day events (which have no time component), we need to be careful
+ * because they're often stored as midnight UTC which can shift days.
+ */
+function eventMatchesTargetDate(event: IcsEvent, target: Date): boolean {
+	const eventStart = event.start;
+
+	// For all-day events, compare using UTC to avoid timezone shifts
+	// All-day events are typically stored as DATE values (no time) which
+	// get parsed as midnight UTC - we don't want timezone conversion
+	if (event.isAllDay) {
+		return eventStart.getUTCFullYear() === target.getFullYear() &&
+		       eventStart.getUTCMonth() === target.getMonth() &&
+		       eventStart.getUTCDate() === target.getDate();
+	}
+
+	// For timed events, use local time comparison since users expect
+	// events to appear on their local calendar day
+	return isSameDay(eventStart, target);
 }
 
 /**
@@ -120,16 +206,51 @@ export function getTodaysMeetings(events: IcsEvent[], targetDate?: Date): IcsEve
 	// Default to today if no target date provided
 	const target = targetDate || new Date();
 
+	// Debug: Log target date details
+	debugLog('Target date for filtering:', {
+		date: target.toISOString(),
+		year: target.getFullYear(),
+		month: target.getMonth() + 1,
+		day: target.getDate(),
+		localString: target.toLocaleDateString()
+	});
+
+	// Debug: Sample first few events to see their date formats
+	if (events.length > 0) {
+		const sampleEvents = events.slice(0, 5);
+		debugLog('Sample events (first 5):', sampleEvents.map(e => ({
+			summary: e.summary,
+			start: e.start.toISOString(),
+			startYear: e.start.getFullYear(),
+			startMonth: e.start.getMonth() + 1,
+			startDay: e.start.getDate(),
+			isAllDay: e.isAllDay
+		})));
+	}
+
+	// Debug: Find events near target date (within 2 days) to help diagnose
+	const targetTime = target.getTime();
+	const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+	const nearbyEvents = events.filter(e => {
+		const diff = Math.abs(e.start.getTime() - targetTime);
+		return diff < twoDaysMs;
+	});
+	if (nearbyEvents.length > 0) {
+		debugLog('Events within 2 days of target:', nearbyEvents.slice(0, 10).map(e => ({
+			summary: e.summary,
+			startISO: e.start.toISOString(),
+			startLocal: e.start.toLocaleString(),
+			eventLocalDay: e.start.getDate(),
+			eventUTCDay: e.start.getUTCDate(),
+			targetDay: target.getDate(),
+			wouldMatch: eventMatchesTargetDate(e, target),
+			isAllDay: e.isAllDay
+		})));
+	}
+
 	// Filter events that occur on the target date
 	const filteredEvents = events.filter(event => {
-		// For all-day events, check if the target date falls within the event's range
-		if (event.isAllDay) {
-			// All-day events: check if target date is on the start date
-			return isSameDay(event.start, target);
-		}
-
-		// For regular events, check if start time is on target date
-		return isSameDay(event.start, target);
+		return eventMatchesTargetDate(event, target);
 	});
 
 	// Sort events: all-day events first, then by start time
@@ -223,19 +344,39 @@ export function parseIcsContent(content: string): IcsParseResult {
 		// Parse the ICS content
 		const parsed = ical.parseICS(sanitized);
 
+		// Define date range for expanding recurring events
+		// Use 1 year before and after today to catch relevant recurrences
+		const now = new Date();
+		const rangeStart = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+		const rangeEnd = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+
 		// Extract events
 		const events: IcsEvent[] = [];
+		let recurringCount = 0;
 
 		for (const key in parsed) {
 			const component = parsed[key];
 
 			// Only process VEVENT components
 			if (component && isVEvent(component)) {
-				const icsEvent = convertToIcsEvent(component);
-				if (icsEvent) {
-					events.push(icsEvent);
+				// Check if this is a recurring event
+				if (hasRecurrenceRule(component)) {
+					// Expand recurring event into individual occurrences
+					const expandedEvents = expandRecurringEvent(component, rangeStart, rangeEnd);
+					events.push(...expandedEvents);
+					recurringCount++;
+				} else {
+					// Non-recurring event - convert directly
+					const icsEvent = convertToIcsEvent(component);
+					if (icsEvent) {
+						events.push(icsEvent);
+					}
 				}
 			}
+		}
+
+		if (recurringCount > 0) {
+			debugLog('Processed', recurringCount, 'recurring event(s), total events after expansion:', events.length);
 		}
 
 		return {

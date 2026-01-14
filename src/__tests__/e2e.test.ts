@@ -27,7 +27,7 @@ describe('End-to-End Integration Tests', () => {
 
 	beforeEach(() => {
 		app = new App();
-		dailyNote = new TFile('2026-01-13.md');
+		dailyNote = new TFile('2026-01-14.md');
 
 		// Reset daily notes mock
 		resetMocks();

@@ -144,9 +144,12 @@ export class PluginSettingTab {
 
 export class Setting {
 	settingEl: HTMLElement;
+	controlEl: HTMLElement;
 
 	constructor(containerEl: HTMLElement) {
 		this.settingEl = document.createElement('div');
+		this.controlEl = document.createElement('div');
+		this.settingEl.appendChild(this.controlEl);
 		containerEl.appendChild(this.settingEl);
 	}
 
@@ -174,6 +177,12 @@ export class Setting {
 
 	addDropdown(cb: (dropdown: DropdownComponent) => void): this {
 		cb(new DropdownComponent());
+		return this;
+	}
+
+	addButton(cb: (button: ButtonComponent) => void): this {
+		const button = new ButtonComponent(this.controlEl);
+		cb(button);
 		return this;
 	}
 }
@@ -247,6 +256,51 @@ export class DropdownComponent {
 	onChange(callback: (value: string) => void): this {
 		this.selectEl.addEventListener('change', () => callback(this.selectEl.value));
 		return this;
+	}
+}
+
+export class ButtonComponent {
+	buttonEl: HTMLButtonElement;
+	private clickCallback: (() => void) | null = null;
+
+	constructor(containerEl?: HTMLElement) {
+		this.buttonEl = document.createElement('button');
+		if (containerEl) {
+			containerEl.appendChild(this.buttonEl);
+		}
+	}
+
+	setButtonText(text: string): this {
+		this.buttonEl.textContent = text;
+		return this;
+	}
+
+	setIcon(icon: string): this {
+		this.buttonEl.setAttribute('data-icon', icon);
+		return this;
+	}
+
+	setTooltip(tooltip: string): this {
+		this.buttonEl.title = tooltip;
+		return this;
+	}
+
+	setCta(): this {
+		this.buttonEl.classList.add('mod-cta');
+		return this;
+	}
+
+	onClick(callback: () => void): this {
+		this.clickCallback = callback;
+		this.buttonEl.addEventListener('click', callback);
+		return this;
+	}
+
+	// Test helper to simulate click
+	click(): void {
+		if (this.clickCallback) {
+			this.clickCallback();
+		}
 	}
 }
 

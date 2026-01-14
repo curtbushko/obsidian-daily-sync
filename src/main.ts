@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, DailySyncSettings, DailySyncSettingTab } from './sett
 import { syncMeetingsToDaily } from './sync/sync-orchestrator';
 import { formatErrorForUser } from './errors/error-handler';
 import { showSyncNotification } from './notifications/notification-handler';
+import { setDebugEnabled } from './utils/debug-logger';
 
 /**
  * Daily Sync Plugin
@@ -46,9 +47,13 @@ export default class DailySyncPlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<DailySyncSettings>);
+		// Update debug logger state based on settings
+		setDebugEnabled(this.settings.enableDebugLogging);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		// Update debug logger state when settings change
+		setDebugEnabled(this.settings.enableDebugLogging);
 	}
 }

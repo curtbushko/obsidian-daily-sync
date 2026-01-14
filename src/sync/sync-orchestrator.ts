@@ -4,13 +4,14 @@
  * Orchestrates the complete sync workflow: fetching from calendar sources,
  * finding/creating daily notes, and inserting meetings with proper error handling.
  */
-import { App, TFile, moment } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import type { DailySyncSettings } from '../settings';
 import { parseIcsFile, fetchAndParseGoogleCalendar, getTodaysMeetings } from '../calendar/ics-parser';
 import { findOrCreateDailyNote } from '../daily-note/daily-note-finder';
 import { ensureSectionExists } from '../daily-note/section-creator';
 import { insertMeetingsIntoNote } from '../daily-note/meeting-inserter';
 import { getTargetDateForSync } from '../daily-note/date-detector';
+import { debugLog, debugError } from '../utils/debug-logger';
 
 /**
  * Error thrown when sync operation fails
@@ -83,15 +84,25 @@ async function syncLocalIcs(
 	};
 
 	try {
-		console.log('Daily Sync - Syncing local ICS calendar from:', settings.icsFilePath);
+		debugLog('=== LOCAL ICS SYNC START ===');
+		debugLog('Source file:', settings.icsFilePath);
+		debugLog('Target date:', targetDate.toISOString(), '| Local:', targetDate.toLocaleDateString());
+		debugLog('Daily note:', dailyNote.path);
 
 		// Parse ICS file
 		const parseResult = await parseIcsFile(settings.icsFilePath, app);
-		console.log('Daily Sync - Parsed', parseResult.events.length, 'total event(s) from local calendar');
+		debugLog('Parsed', parseResult.events.length, 'total event(s) from local calendar');
 
 		// Filter for target date's meetings
 		const todaysMeetings = getTodaysMeetings(parseResult.events, targetDate);
-		console.log('Daily Sync - Found', todaysMeetings.length, 'meeting(s) for target date');
+		debugLog('Found', todaysMeetings.length, 'meeting(s) for target date', targetDate.toLocaleDateString());
+		if (todaysMeetings.length > 0) {
+			debugLog('Matched meetings:', todaysMeetings.map(m => ({
+				summary: m.summary,
+				start: m.start.toLocaleString(),
+				isAllDay: m.isAllDay
+			})));
+		}
 
 		// Ensure section exists
 		await ensureSectionExists(app, dailyNote, settings.localCalendarSection, 2);
@@ -101,9 +112,9 @@ async function syncLocalIcs(
 
 		result.success = true;
 		result.meetingsAdded = insertedCount;
-		console.log('Daily Sync - Local calendar sync completed:', insertedCount, 'meeting(s) added');
+		debugLog('=== LOCAL ICS SYNC COMPLETE ===', insertedCount, 'meeting(s) added');
 	} catch (error) {
-		console.error('Daily Sync - Local calendar sync failed:', error);
+		debugError('=== LOCAL ICS SYNC FAILED ===', error);
 		result.success = false;
 		result.error = error instanceof Error ? error.message : String(error);
 	}
@@ -127,15 +138,25 @@ async function syncGoogleCalendar(
 	};
 
 	try {
-		console.log('Daily Sync - Syncing Google Calendar from:', settings.googleCalendarLink);
+		debugLog('=== GOOGLE CALENDAR SYNC START ===');
+		debugLog('Source URL:', settings.googleCalendarLink);
+		debugLog('Target date:', targetDate.toISOString(), '| Local:', targetDate.toLocaleDateString());
+		debugLog('Daily note:', dailyNote.path);
 
 		// Fetch and parse Google Calendar
 		const parseResult = await fetchAndParseGoogleCalendar(settings.googleCalendarLink);
-		console.log('Daily Sync - Parsed', parseResult.events.length, 'total event(s) from Google Calendar');
+		debugLog('Parsed', parseResult.events.length, 'total event(s) from Google Calendar');
 
 		// Filter for target date's meetings
 		const todaysMeetings = getTodaysMeetings(parseResult.events, targetDate);
-		console.log('Daily Sync - Found', todaysMeetings.length, 'meeting(s) for target date');
+		debugLog('Found', todaysMeetings.length, 'meeting(s) for target date', targetDate.toLocaleDateString());
+		if (todaysMeetings.length > 0) {
+			debugLog('Matched meetings:', todaysMeetings.map(m => ({
+				summary: m.summary,
+				start: m.start.toLocaleString(),
+				isAllDay: m.isAllDay
+			})));
+		}
 
 		// Ensure section exists
 		await ensureSectionExists(app, dailyNote, settings.googleCalendarSection, 2);
@@ -145,9 +166,9 @@ async function syncGoogleCalendar(
 
 		result.success = true;
 		result.meetingsAdded = insertedCount;
-		console.log('Daily Sync - Google Calendar sync completed:', insertedCount, 'meeting(s) added');
+		debugLog('=== GOOGLE CALENDAR SYNC COMPLETE ===', insertedCount, 'meeting(s) added');
 	} catch (error) {
-		console.error('Daily Sync - Google Calendar sync failed:', error);
+		debugError('=== GOOGLE CALENDAR SYNC FAILED ===', error);
 		result.success = false;
 		result.error = error instanceof Error ? error.message : String(error);
 	}

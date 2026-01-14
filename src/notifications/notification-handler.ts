@@ -6,6 +6,7 @@
  */
 import { Notice } from 'obsidian';
 import type { SyncResult } from '../sync/sync-orchestrator';
+import { debugError } from '../utils/debug-logger';
 
 /**
  * Shows a notification based on sync result
@@ -30,10 +31,10 @@ export function showSyncNotification(result: SyncResult): void {
 
 	// Log errors to console for debugging
 	if (result.localCalendar.enabled && !result.localCalendar.success && result.localCalendar.error) {
-		console.error('Daily Sync - Local calendar error:', result.localCalendar.error);
+		debugError('Local calendar error:', result.localCalendar.error);
 	}
 	if (result.googleCalendar.enabled && !result.googleCalendar.success && result.googleCalendar.error) {
-		console.error('Daily Sync - Google Calendar error:', result.googleCalendar.error);
+		debugError('Google Calendar error:', result.googleCalendar.error);
 	}
 
 	// Full success - both sources worked (if enabled)
