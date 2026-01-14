@@ -7,6 +7,7 @@
 import { App, TFile } from 'obsidian';
 import type { DailySyncSettings } from '../settings';
 import { parseIcsFile, fetchAndParseGoogleCalendar, getTodaysMeetings } from '../calendar/ics-parser';
+import { filterIgnoredMeetings } from '../calendar/meeting-filter';
 import { findOrCreateDailyNote } from '../daily-note/daily-note-finder';
 import { ensureSectionExists } from '../daily-note/section-creator';
 import { insertMeetingsIntoNote } from '../daily-note/meeting-inserter';
@@ -96,8 +97,15 @@ async function syncLocalIcs(
 		// Filter for target date's meetings
 		const todaysMeetings = getTodaysMeetings(parseResult.events, targetDate);
 		debugLog('Found', todaysMeetings.length, 'meeting(s) for target date', targetDate.toLocaleDateString());
-		if (todaysMeetings.length > 0) {
-			debugLog('Matched meetings:', todaysMeetings.map(m => ({
+
+		// Apply ignore filter
+		const filteredMeetings = filterIgnoredMeetings(todaysMeetings, settings.localCalendarIgnore);
+		if (filteredMeetings.length < todaysMeetings.length) {
+			debugLog('After ignore filter:', filteredMeetings.length, 'meeting(s) remaining');
+		}
+
+		if (filteredMeetings.length > 0) {
+			debugLog('Meetings to sync:', filteredMeetings.map(m => ({
 				summary: m.summary,
 				start: m.start.toLocaleString(),
 				isAllDay: m.isAllDay
@@ -108,7 +116,7 @@ async function syncLocalIcs(
 		await ensureSectionExists(app, dailyNote, settings.localCalendarSection, 2);
 
 		// Insert meetings and get count of actually inserted meetings
-		const insertedCount = await insertMeetingsIntoNote(app, dailyNote, todaysMeetings, settings.localCalendarSection);
+		const insertedCount = await insertMeetingsIntoNote(app, dailyNote, filteredMeetings, settings.localCalendarSection);
 
 		result.success = true;
 		result.meetingsAdded = insertedCount;
@@ -150,8 +158,15 @@ async function syncGoogleCalendar(
 		// Filter for target date's meetings
 		const todaysMeetings = getTodaysMeetings(parseResult.events, targetDate);
 		debugLog('Found', todaysMeetings.length, 'meeting(s) for target date', targetDate.toLocaleDateString());
-		if (todaysMeetings.length > 0) {
-			debugLog('Matched meetings:', todaysMeetings.map(m => ({
+
+		// Apply ignore filter
+		const filteredMeetings = filterIgnoredMeetings(todaysMeetings, settings.googleCalendarIgnore);
+		if (filteredMeetings.length < todaysMeetings.length) {
+			debugLog('After ignore filter:', filteredMeetings.length, 'meeting(s) remaining');
+		}
+
+		if (filteredMeetings.length > 0) {
+			debugLog('Meetings to sync:', filteredMeetings.map(m => ({
 				summary: m.summary,
 				start: m.start.toLocaleString(),
 				isAllDay: m.isAllDay
@@ -162,7 +177,7 @@ async function syncGoogleCalendar(
 		await ensureSectionExists(app, dailyNote, settings.googleCalendarSection, 2);
 
 		// Insert meetings and get count of actually inserted meetings
-		const insertedCount = await insertMeetingsIntoNote(app, dailyNote, todaysMeetings, settings.googleCalendarSection);
+		const insertedCount = await insertMeetingsIntoNote(app, dailyNote, filteredMeetings, settings.googleCalendarSection);
 
 		result.success = true;
 		result.meetingsAdded = insertedCount;

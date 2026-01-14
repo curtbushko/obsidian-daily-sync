@@ -46,12 +46,16 @@ export interface DailySyncSettings {
 	icsFilePath: string;
 	/** Section name in daily note for local calendar meetings */
 	localCalendarSection: string;
+	/** Comma-separated list of phrases to ignore for local calendar */
+	localCalendarIgnore: string;
 	/** Enable/disable Google Calendar sync */
 	enableGoogleCalendar: boolean;
 	/** Google Calendar shareable link */
 	googleCalendarLink: string;
 	/** Section name in daily note for Google Calendar meetings */
 	googleCalendarSection: string;
+	/** Comma-separated list of phrases to ignore for Google Calendar */
+	googleCalendarIgnore: string;
 	/** Enable/disable debug logging to console */
 	enableDebugLogging: boolean;
 }
@@ -60,9 +64,11 @@ export const DEFAULT_SETTINGS: DailySyncSettings = {
 	enableLocalCalendar: true,
 	icsFilePath: '',
 	localCalendarSection: 'Meetings',
+	localCalendarIgnore: '',
 	enableGoogleCalendar: true,
 	googleCalendarLink: '',
 	googleCalendarSection: 'Meetings',
+	googleCalendarIgnore: '',
 	enableDebugLogging: false
 };
 
@@ -103,12 +109,11 @@ export class DailySyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Ics file path')
-			.setDesc('Path to your local .ics calendar file')
+			.setName('Ics file path (required)')
+			.setDesc('Absolute path to your local .ics calendar file. Example: /Users/name/calendars/work.ics')
 			.addText(text => {
 				this.icsPathTextComponent = text;
-				text.setPlaceholder('/path/to/calendar.ics')
-					.setValue(this.plugin.settings.icsFilePath)
+				text.setValue(this.plugin.settings.icsFilePath)
 					.onChange(async (value) => {
 						this.plugin.settings.icsFilePath = value;
 						await this.plugin.saveSettings();
@@ -123,12 +128,23 @@ export class DailySyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Section name for local calendar')
-			.setDesc('Section heading in daily note where local calendar meetings will be added')
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
+			.setDesc('Section heading in daily note where meetings will be added. Example: Meetings')
 			.addText(text => text
-				.setPlaceholder('Meetings')
 				.setValue(this.plugin.settings.localCalendarSection)
 				.onChange(async (value) => {
 					this.plugin.settings.localCalendarSection = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Ignore phrases')
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
+			.setDesc('Comma-separated phrases to skip. Example: Blocked, Personal, Focus Time')
+			.addText(text => text
+				.setValue(this.plugin.settings.localCalendarIgnore)
+				.onChange(async (value) => {
+					this.plugin.settings.localCalendarIgnore = value;
 					await this.plugin.saveSettings();
 				}));
 
@@ -151,9 +167,8 @@ export class DailySyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Shareable link')
-			.setDesc('Public/shareable ical link from your calendar')
+			.setDesc('Public/shareable ical link. Example: https://calendar.google.com/calendar/ical/user@gmail.com/basic.ics')
 			.addText(text => text
-				.setPlaceholder('https://calendar.google.com/calendar/ical/...')
 				.setValue(this.plugin.settings.googleCalendarLink)
 				.onChange(async (value) => {
 					this.plugin.settings.googleCalendarLink = value;
@@ -162,12 +177,23 @@ export class DailySyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Section name')
-			.setDesc('Section heading in daily note where calendar meetings will be added')
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
+			.setDesc('Section heading in daily note where meetings will be added. Example: Meetings')
 			.addText(text => text
-				.setPlaceholder('Meetings')
 				.setValue(this.plugin.settings.googleCalendarSection)
 				.onChange(async (value) => {
 					this.plugin.settings.googleCalendarSection = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Ignore phrases')
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
+			.setDesc('Comma-separated phrases to skip. Example: Blocked, Personal, Focus Time')
+			.addText(text => text
+				.setValue(this.plugin.settings.googleCalendarIgnore)
+				.onChange(async (value) => {
+					this.plugin.settings.googleCalendarIgnore = value;
 					await this.plugin.saveSettings();
 				}));
 

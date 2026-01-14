@@ -351,4 +351,270 @@ describe('Meeting Filter', () => {
 			});
 		});
 	});
+
+	describe('filterIgnoredMeetings', () => {
+		// Import will be added when function is implemented
+		let filterIgnoredMeetings: (meetings: IcsEvent[], ignorePhrasesString: string) => IcsEvent[];
+
+		beforeEach(async () => {
+			// Dynamic import to handle the function not existing yet during TDD
+			try {
+				const module = await import('../meeting-filter');
+				filterIgnoredMeetings = module.filterIgnoredMeetings;
+			} catch {
+				// Function doesn't exist yet - tests will fail as expected in TDD
+				filterIgnoredMeetings = () => [];
+			}
+		});
+
+		// Helper to create test events
+		function createEvent(summary: string): IcsEvent {
+			return {
+				summary,
+				start: new Date('2026-01-14T10:00:00Z'),
+				end: new Date('2026-01-14T11:00:00Z'),
+				isAllDay: false
+			};
+		}
+
+		describe('when ignore phrases is empty', () => {
+			it('should return all meetings when ignore string is empty', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('Project Review'),
+					createEvent('Team Lunch')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, '');
+
+				// Assert
+				expect(result).toHaveLength(3);
+				expect(result).toEqual(meetings);
+			});
+
+			it('should return all meetings when ignore string is whitespace only', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, '   ');
+
+				// Assert
+				expect(result).toHaveLength(2);
+			});
+		});
+
+		describe('when filtering with single phrase', () => {
+			it('should filter out meetings containing the ignore phrase', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('Blocked: Focus Time'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Blocked');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+
+			it('should filter case-insensitively', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('BLOCKED: Focus Time'),
+					createEvent('blocked time'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'blocked');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+
+			it('should match partial words in meeting summary', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('Focus Block'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Block');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+		});
+
+		describe('when filtering with multiple phrases', () => {
+			it('should filter out meetings matching any phrase', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('Blocked: Focus Time'),
+					createEvent('Personal: Dentist'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Blocked, Personal');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+
+			it('should handle extra whitespace around phrases', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('Blocked Time'),
+					createEvent('Personal Errand'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, '  Blocked  ,  Personal  ');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+
+			it('should skip empty phrases in comma-separated list', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('Blocked Time'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Blocked,,, ');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+		});
+
+		describe('when handling edge cases', () => {
+			it('should return empty array when all meetings are filtered', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Blocked: Focus'),
+					createEvent('Blocked: Writing')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Blocked');
+
+				// Assert
+				expect(result).toHaveLength(0);
+			});
+
+			it('should handle empty meetings array', () => {
+				// Arrange
+				const meetings: IcsEvent[] = [];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Blocked');
+
+				// Assert
+				expect(result).toHaveLength(0);
+			});
+
+			it('should handle meetings with empty summary', () => {
+				// Arrange
+				const meetings = [
+					createEvent(''),
+					createEvent('Daily Standup')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Blocked');
+
+				// Assert
+				expect(result).toHaveLength(2);
+			});
+
+			it('should filter meetings with special regex characters in phrase', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('[Personal] Dentist'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, '[Personal]');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+
+			it('should handle phrases with parentheses', () => {
+				// Arrange
+				const meetings = [
+					createEvent('Daily Standup'),
+					createEvent('(Blocked) Focus Time'),
+					createEvent('Project Review')
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, '(Blocked)');
+
+				// Assert
+				expect(result).toHaveLength(2);
+				expect(result.map(m => m.summary)).toEqual(['Daily Standup', 'Project Review']);
+			});
+		});
+
+		describe('when preserving event properties', () => {
+			it('should preserve all event properties in filtered results', () => {
+				// Arrange
+				const meetings: IcsEvent[] = [
+					{
+						summary: 'All Day Event',
+						start: new Date('2026-01-14T00:00:00Z'),
+						end: new Date('2026-01-15T00:00:00Z'),
+						isAllDay: true
+					},
+					{
+						summary: 'Blocked Time',
+						start: new Date('2026-01-14T10:00:00Z'),
+						end: new Date('2026-01-14T11:00:00Z'),
+						isAllDay: false
+					}
+				];
+
+				// Act
+				const result = filterIgnoredMeetings(meetings, 'Blocked');
+
+				// Assert
+				expect(result).toHaveLength(1);
+				expect(result[0]).toEqual({
+					summary: 'All Day Event',
+					start: new Date('2026-01-14T00:00:00Z'),
+					end: new Date('2026-01-15T00:00:00Z'),
+					isAllDay: true
+				});
+			});
+		});
+	});
 });

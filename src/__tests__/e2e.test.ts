@@ -56,9 +56,12 @@ describe('End-to-End Integration Tests', () => {
 			enableLocalCalendar: true,
 			icsFilePath: join(__dirname, 'fixtures', 'sample-calendar.ics'),
 			localCalendarSection: 'Meetings',
+			localCalendarIgnore: '',
 			enableGoogleCalendar: true,
 			googleCalendarLink: '',
-			googleCalendarSection: 'Google Meetings'
+			googleCalendarSection: 'Google Meetings',
+			googleCalendarIgnore: '',
+			enableDebugLogging: false
 		};
 	});
 
