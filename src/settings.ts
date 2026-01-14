@@ -5,10 +5,14 @@ import type DailySyncPlugin from './main';
  * Plugin settings interface
  */
 export interface DailySyncSettings {
+	/** Enable/disable local calendar sync */
+	enableLocalCalendar: boolean;
 	/** Path to local .ics calendar file */
 	icsFilePath: string;
 	/** Section name in daily note for local calendar meetings */
 	localCalendarSection: string;
+	/** Enable/disable Google Calendar sync */
+	enableGoogleCalendar: boolean;
 	/** Google Calendar shareable link */
 	googleCalendarLink: string;
 	/** Section name in daily note for Google Calendar meetings */
@@ -16,8 +20,10 @@ export interface DailySyncSettings {
 }
 
 export const DEFAULT_SETTINGS: DailySyncSettings = {
+	enableLocalCalendar: true,
 	icsFilePath: '',
 	localCalendarSection: 'Meetings',
+	enableGoogleCalendar: true,
 	googleCalendarLink: '',
 	googleCalendarSection: 'Meetings'
 };
@@ -42,6 +48,16 @@ export class DailySyncSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Local calendar')
 			.setHeading();
+
+		new Setting(containerEl)
+			.setName('Enable local calendar')
+			.setDesc('Toggle to enable or disable syncing from local .ics calendar')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableLocalCalendar)
+				.onChange(async (value) => {
+					this.plugin.settings.enableLocalCalendar = value;
+					await this.plugin.saveSettings();
+				}));
 
 		new Setting(containerEl)
 			.setName('Ics file path')
@@ -69,6 +85,16 @@ export class DailySyncSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Google calendar')
 			.setHeading();
+
+		new Setting(containerEl)
+			.setName('Enable Google calendar')
+			.setDesc('Toggle to enable or disable syncing from Google Calendar')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableGoogleCalendar)
+				.onChange(async (value) => {
+					this.plugin.settings.enableGoogleCalendar = value;
+					await this.plugin.saveSettings();
+				}));
 
 		new Setting(containerEl)
 			.setName('Shareable link')

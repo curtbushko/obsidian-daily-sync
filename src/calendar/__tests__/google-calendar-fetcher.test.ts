@@ -94,6 +94,137 @@ END:VCALENDAR`;
 			});
 		});
 
+		describe('when handling Google Calendar sharable URLs', () => {
+			it('should accept and convert embed URL format', async () => {
+				// Arrange
+				const embedUrl = 'https://calendar.google.com/calendar/embed?src=test@gmail.com';
+
+				mockRequestUrl(async (request) => {
+					const url = typeof request === 'string' ? request : request.url;
+					// Should convert to iCal format
+					expect(url).toContain('/ical/');
+					expect(url).toContain('test%40gmail.com'); // URL encoded @
+					expect(url).toMatch(/\.ics$/);
+					expect(url).toContain('/public/basic.ics');
+
+					return {
+						status: 200,
+						headers: { 'content-type': 'text/calendar' },
+						arrayBuffer: new ArrayBuffer(0),
+						json: {},
+						text: validICalContent
+					} as RequestUrlResponse;
+				});
+
+				// Act
+				const result = await fetchGoogleCalendar(embedUrl);
+
+				// Assert
+				expect(result.success).toBe(true);
+				expect(result.content).toBe(validICalContent);
+			});
+
+			it('should accept embed URL with encoded calendar ID', async () => {
+				// Arrange
+				const embedUrl = 'https://calendar.google.com/calendar/embed?src=en.usa%23holiday%40group.v.calendar.google.com';
+
+				mockRequestUrl(async (request) => {
+					const url = typeof request === 'string' ? request : request.url;
+					expect(url).toMatch(/\.ics$/);
+
+					return {
+						status: 200,
+						headers: { 'content-type': 'text/calendar' },
+						arrayBuffer: new ArrayBuffer(0),
+						json: {},
+						text: validICalContent
+					} as RequestUrlResponse;
+				});
+
+				// Act
+				const result = await fetchGoogleCalendar(embedUrl);
+
+				// Assert
+				expect(result.success).toBe(true);
+			});
+
+			it('should accept URL with cid parameter (base64 encoded)', async () => {
+				// Arrange
+				// cid parameter is base64 encoded calendar ID
+				// 'dGVzdEBnbWFpbC5jb20=' is base64 for 'test@gmail.com'
+				const sharableUrl = 'https://calendar.google.com/calendar/u/0?cid=dGVzdEBnbWFpbC5jb20%3D';
+
+				mockRequestUrl(async (request) => {
+					const url = typeof request === 'string' ? request : request.url;
+					expect(url).toMatch(/\.ics$/);
+					// Should decode the base64 and use it
+					expect(url).toContain('test%40gmail.com');
+
+					return {
+						status: 200,
+						headers: { 'content-type': 'text/calendar' },
+						arrayBuffer: new ArrayBuffer(0),
+						json: {},
+						text: validICalContent
+					} as RequestUrlResponse;
+				});
+
+				// Act
+				const result = await fetchGoogleCalendar(sharableUrl);
+
+				// Assert
+				expect(result.success).toBe(true);
+			});
+
+			it('should accept URL with additional params', async () => {
+				// Arrange
+				const sharableUrl = 'https://calendar.google.com/calendar/u/0?cid=dGVzdEBnbWFpbC5jb20%3D&mode=week';
+
+				mockRequestUrl(async (request) => {
+					const url = typeof request === 'string' ? request : request.url;
+					expect(url).toMatch(/\.ics$/);
+
+					return {
+						status: 200,
+						headers: { 'content-type': 'text/calendar' },
+						arrayBuffer: new ArrayBuffer(0),
+						json: {},
+						text: validICalContent
+					} as RequestUrlResponse;
+				});
+
+				// Act
+				const result = await fetchGoogleCalendar(sharableUrl);
+
+				// Assert
+				expect(result.success).toBe(true);
+			});
+
+			it('should still accept direct iCal URLs', async () => {
+				// Arrange - this should continue to work as before
+				const icsUrl = 'https://calendar.google.com/calendar/ical/test@gmail.com/public/basic.ics';
+
+				mockRequestUrl(async (request) => {
+					const url = typeof request === 'string' ? request : request.url;
+					expect(url).toBe(icsUrl);
+
+					return {
+						status: 200,
+						headers: { 'content-type': 'text/calendar' },
+						arrayBuffer: new ArrayBuffer(0),
+						json: {},
+						text: validICalContent
+					} as RequestUrlResponse;
+				});
+
+				// Act
+				const result = await fetchGoogleCalendar(icsUrl);
+
+				// Assert
+				expect(result.success).toBe(true);
+			});
+		});
+
 		describe('when handling URL validation errors', () => {
 			it('should throw INVALID_URL error when URL is empty', async () => {
 				// Arrange
@@ -139,9 +270,9 @@ END:VCALENDAR`;
 				}
 			});
 
-			it('should throw INVALID_URL error when URL does not end with .ics', async () => {
+			it('should throw INVALID_URL error when URL has no calendar ID', async () => {
 				// Arrange
-				const invalidUrl = 'https://calendar.google.com/calendar/test';
+				const invalidUrl = 'https://calendar.google.com/calendar/';
 
 				// Act & Assert
 				try {
@@ -150,7 +281,7 @@ END:VCALENDAR`;
 				} catch (error) {
 					expect(error).toBeInstanceOf(GoogleCalendarFetchError);
 					expect((error as GoogleCalendarFetchError).code).toBe('INVALID_URL');
-					expect((error as GoogleCalendarFetchError).message).toContain('.ics');
+					expect((error as GoogleCalendarFetchError).message).toContain('calendar ID');
 				}
 			});
 		});
@@ -176,6 +307,59 @@ END:VCALENDAR`;
 					expect(error).toBeInstanceOf(GoogleCalendarFetchError);
 					expect((error as GoogleCalendarFetchError).code).toBe('NOT_FOUND');
 					expect((error as GoogleCalendarFetchError).message).toContain('not found');
+				}
+			});
+
+			it('should provide helpful error when embed URL points to private calendar (404)', async () => {
+				// Arrange - user provides embed URL for private calendar
+				const embedUrl = 'https://calendar.google.com/calendar/embed?src=private@gmail.com';
+
+				mockRequestUrl(async () => {
+					// When we try to fetch /public/basic.ics for a private calendar, we get 404
+					throw Object.assign(new Error('HTTP 404'), {
+						status: 404,
+						headers: {},
+						arrayBuffer: new ArrayBuffer(0),
+						json: {},
+						text: 'Not Found'
+					});
+				});
+
+				// Act & Assert
+				try {
+					await fetchGoogleCalendar(embedUrl);
+					expect.fail('Should have thrown an error');
+				} catch (error) {
+					expect(error).toBeInstanceOf(GoogleCalendarFetchError);
+					expect((error as GoogleCalendarFetchError).code).toBe('NOT_FOUND');
+					// Error message should guide user to use the iCal URL instead
+					expect((error as GoogleCalendarFetchError).message).toContain('Secret address in iCal format');
+					expect((error as GoogleCalendarFetchError).message).toContain('private calendar');
+				}
+			});
+
+			it('should provide helpful error when embed URL gets 403', async () => {
+				// Arrange - user provides embed URL that's not accessible
+				const embedUrl = 'https://calendar.google.com/calendar/embed?src=restricted@gmail.com';
+
+				mockRequestUrl(async () => {
+					throw Object.assign(new Error('HTTP 403'), {
+						status: 403,
+						headers: {},
+						arrayBuffer: new ArrayBuffer(0),
+						json: {},
+						text: 'Forbidden'
+					});
+				});
+
+				// Act & Assert
+				try {
+					await fetchGoogleCalendar(embedUrl);
+					expect.fail('Should have thrown an error');
+				} catch (error) {
+					expect(error).toBeInstanceOf(GoogleCalendarFetchError);
+					expect((error as GoogleCalendarFetchError).code).toBe('FORBIDDEN');
+					expect((error as GoogleCalendarFetchError).message).toContain('Secret address in iCal format');
 				}
 			});
 

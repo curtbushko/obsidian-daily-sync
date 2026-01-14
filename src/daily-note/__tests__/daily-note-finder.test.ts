@@ -31,15 +31,15 @@ describe('Daily Note Finder', () => {
 		it('should return existing daily note when it exists', async () => {
 			// Arrange
 			const testDate = moment('2024-01-15');
-			const existingFile = new TFile('Daily Notes/2024-01-15.md');
-			setDailyNotes({ '2024-01-15': existingFile });
+			const existingFile = new TFile('Daily Notes/20240115.md');
+			setDailyNotes({ '20240115': existingFile });
 
 			// Act
 			const result = await findOrCreateDailyNote(app, testDate);
 
 			// Assert
 			expect(result).toBe(existingFile);
-			expect(result.path).toBe('Daily Notes/2024-01-15.md');
+			expect(result.path).toBe('Daily Notes/20240115.md');
 		});
 
 		it('should create and return new daily note when it does not exist', async () => {
@@ -52,13 +52,13 @@ describe('Daily Note Finder', () => {
 
 			// Assert
 			expect(result).toBeInstanceOf(TFile);
-			expect(result.path).toBe('Daily Notes/2024-01-16.md');
+			expect(result.path).toBe('Daily Notes/20240116.md');
 		});
 
 		it('should default to today when no date provided', async () => {
 			// Arrange
 			const today = moment();
-			const todayStr = today.format('YYYY-MM-DD');
+			const todayStr = today.format('YYYYMMDD');
 			setDailyNotes({});
 
 			// Act
@@ -78,7 +78,7 @@ describe('Daily Note Finder', () => {
 			const result = await findOrCreateDailyNote(app, testDate);
 
 			// Assert
-			expect(result.path).toBe('Daily Notes/2024-12-31.md');
+			expect(result.path).toBe('Daily Notes/20241231.md');
 		});
 
 		it('should throw DailyNotesNotEnabledError when plugin is not loaded', async () => {
@@ -115,7 +115,7 @@ describe('Daily Note Finder', () => {
 			const result = await findOrCreateDailyNote(app, pastDate);
 
 			// Assert
-			expect(result.path).toBe('Daily Notes/2023-01-01.md');
+			expect(result.path).toBe('Daily Notes/20230101.md');
 		});
 
 		it('should work with future dates', async () => {
@@ -127,7 +127,7 @@ describe('Daily Note Finder', () => {
 			const result = await findOrCreateDailyNote(app, futureDate);
 
 			// Assert
-			expect(result.path).toBe('Daily Notes/2025-12-31.md');
+			expect(result.path).toBe('Daily Notes/20251231.md');
 		});
 
 		it('should return same file for multiple calls with same date', async () => {
@@ -152,7 +152,7 @@ describe('Daily Note Finder', () => {
 			const result = await findOrCreateDailyNote(app, newYearDate);
 
 			// Assert
-			expect(result.path).toBe('Daily Notes/2024-01-01.md');
+			expect(result.path).toBe('Daily Notes/20240101.md');
 		});
 
 		it('should handle leap year date', async () => {
@@ -164,7 +164,7 @@ describe('Daily Note Finder', () => {
 			const result = await findOrCreateDailyNote(app, leapDate);
 
 			// Assert
-			expect(result.path).toBe('Daily Notes/2024-02-29.md');
+			expect(result.path).toBe('Daily Notes/20240229.md');
 		});
 	});
 

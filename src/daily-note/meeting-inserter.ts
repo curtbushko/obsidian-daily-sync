@@ -37,7 +37,7 @@ export class MeetingInsertionError extends Error {
  * Formats a meeting as a markdown bullet point.
  *
  * @param meeting - The meeting to format
- * @returns Formatted string like "- Meeting: Team Standup (10:00 AM)"
+ * @returns Formatted string like "- [ ] Meeting: Team Standup (10:00 AM)"
  *
  * @example
  * ```typescript
@@ -47,16 +47,16 @@ export class MeetingInsertionError extends Error {
  *   end: new Date('2024-01-15T10:30:00'),
  *   isAllDay: false
  * };
- * formatMeeting(meeting); // "- Meeting: Team Standup (10:00 AM)"
+ * formatMeeting(meeting); // "- [ ] Meeting: Team Standup (10:00 AM)"
  * ```
  */
 export function formatMeeting(meeting: IcsEvent): string {
 	if (meeting.isAllDay) {
-		return `- Meeting: ${meeting.summary} (All day)`;
+		return `- [ ] Meeting: ${meeting.summary} (All day)`;
 	}
 
 	const time = formatTime(meeting.start);
-	return `- Meeting: ${meeting.summary} (${time})`;
+	return `- [ ] Meeting: ${meeting.summary} (${time})`;
 }
 
 /**
@@ -150,6 +150,7 @@ function isMeetingInContent(meeting: IcsEvent, content: string): boolean {
  * @param file - The daily note file
  * @param meetings - Array of meetings to insert
  * @param sectionName - Target section heading (without # symbols)
+ * @returns Number of meetings actually inserted (excluding duplicates)
  * @throws {SectionNotFoundError} - If the target section doesn't exist
  * @throws {MeetingInsertionError} - If insertion fails
  *
@@ -163,7 +164,8 @@ function isMeetingInContent(meeting: IcsEvent, content: string): boolean {
  *     isAllDay: false
  *   }
  * ];
- * await insertMeetingsIntoNote(app, dailyNote, meetings, 'Meetings');
+ * const insertedCount = await insertMeetingsIntoNote(app, dailyNote, meetings, 'Meetings');
+ * console.log(`Inserted ${insertedCount} meetings`);
  * ```
  */
 export async function insertMeetingsIntoNote(
@@ -171,11 +173,11 @@ export async function insertMeetingsIntoNote(
 	file: TFile,
 	meetings: IcsEvent[],
 	sectionName: string
-): Promise<void> {
+): Promise<number> {
 	try {
 		// Handle empty meetings array
 		if (meetings.length === 0) {
-			return;
+			return 0;
 		}
 
 		// Read the current file content
@@ -198,13 +200,25 @@ export async function insertMeetingsIntoNote(
 		const sectionContent = lines.slice(bounds.start, bounds.end).join('\n');
 		const newMeetings = meetings.filter(meeting => !isMeetingInContent(meeting, sectionContent));
 
+		// Log duplicate detection
+		const duplicateCount = meetings.length - newMeetings.length;
+		if (duplicateCount > 0) {
+			console.log('Daily Sync - Skipping', duplicateCount, 'duplicate meeting(s) already in note');
+		}
+
 		// If all meetings are duplicates, no need to modify
 		if (newMeetings.length === 0) {
-			return;
+			if (duplicateCount > 0) {
+				console.log('Daily Sync - All', duplicateCount, 'meeting(s) already exist in "' + sectionName + '" section');
+			}
+			return 0;
 		}
 
 		// Format new meetings
 		const formattedMeetings = newMeetings.map(meeting => formatMeeting(meeting));
+
+		// Log what's being inserted
+		console.log('Daily Sync - Inserting', newMeetings.length, 'new meeting(s) into "' + sectionName + '" section');
 
 		// Insert meetings after the section heading
 		// Find the position to insert (after heading, preserving existing content)
@@ -225,7 +239,10 @@ export async function insertMeetingsIntoNote(
 		// Write the updated content
 		await app.vault.modify(file, updatedContent);
 
+		return newMeetings.length;
+
 	} catch (error) {
+		console.error(`Daily Sync - Error inserting meetings into ${file.path}:`, error);
 		if (error instanceof SectionNotFoundError) {
 			throw error;
 		}

@@ -35,7 +35,7 @@ describe('Meeting Inserter', () => {
 			const result = formatMeeting(meeting);
 
 			// Assert
-			expect(result).toBe('- Meeting: Team Standup (10:00 AM)');
+			expect(result).toBe('- [ ] Meeting: Team Standup (10:00 AM)');
 		});
 
 		it('should format an all-day event', () => {
@@ -51,7 +51,7 @@ describe('Meeting Inserter', () => {
 			const result = formatMeeting(meeting);
 
 			// Assert
-			expect(result).toBe('- Meeting: Company Holiday (All day)');
+			expect(result).toBe('- [ ] Meeting: Company Holiday (All day)');
 		});
 
 		it('should handle afternoon times (PM)', () => {
@@ -67,7 +67,7 @@ describe('Meeting Inserter', () => {
 			const result = formatMeeting(meeting);
 
 			// Assert
-			expect(result).toBe('- Meeting: Client Call (2:30 PM)');
+			expect(result).toBe('- [ ] Meeting: Client Call (2:30 PM)');
 		});
 
 		it('should handle midnight time', () => {
@@ -83,7 +83,7 @@ describe('Meeting Inserter', () => {
 			const result = formatMeeting(meeting);
 
 			// Assert
-			expect(result).toBe('- Meeting: Midnight Release (12:00 AM)');
+			expect(result).toBe('- [ ] Meeting: Midnight Release (12:00 AM)');
 		});
 
 		it('should handle noon time', () => {
@@ -99,7 +99,7 @@ describe('Meeting Inserter', () => {
 			const result = formatMeeting(meeting);
 
 			// Assert
-			expect(result).toBe('- Meeting: Lunch Meeting (12:00 PM)');
+			expect(result).toBe('- [ ] Meeting: Lunch Meeting (12:00 PM)');
 		});
 	});
 
@@ -126,12 +126,13 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(1);
 			expect(modifySpy).toHaveBeenCalledWith(
 				file,
-				expect.stringContaining('- Meeting: Team Standup (10:00 AM)')
+				expect.stringContaining('- [ ] Meeting: Team Standup (10:00 AM)')
 			);
 			expect(modifySpy).toHaveBeenCalledWith(
 				file,
@@ -161,18 +162,19 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(2);
 			const writtenContent = modifySpy.mock.calls[0][1] as string;
-			expect(writtenContent).toContain('- Meeting: Team Standup (10:00 AM)');
-			expect(writtenContent).toContain('- Meeting: Client Call (2:00 PM)');
+			expect(writtenContent).toContain('- [ ] Meeting: Team Standup (10:00 AM)');
+			expect(writtenContent).toContain('- [ ] Meeting: Client Call (2:00 PM)');
 		});
 
 		it('should not insert duplicate meetings', async () => {
 			// Arrange
 			const initialContent = `## Meetings
-- Meeting: Team Standup (10:00 AM)
+- [ ] Meeting: Team Standup (10:00 AM)
 
 `;
 			const meetings: IcsEvent[] = [
@@ -188,16 +190,17 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(0);
 			expect(modifySpy).not.toHaveBeenCalled();
 		});
 
 		it('should insert only new meetings when some are duplicates', async () => {
 			// Arrange
 			const initialContent = `## Meetings
-- Meeting: Team Standup (10:00 AM)
+- [ ] Meeting: Team Standup (10:00 AM)
 
 `;
 			const meetings: IcsEvent[] = [
@@ -219,12 +222,13 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(1);
 			const writtenContent = modifySpy.mock.calls[0][1] as string;
-			expect(writtenContent).toContain('- Meeting: Team Standup (10:00 AM)');
-			expect(writtenContent).toContain('- Meeting: Client Call (2:00 PM)');
+			expect(writtenContent).toContain('- [ ] Meeting: Team Standup (10:00 AM)');
+			expect(writtenContent).toContain('- [ ] Meeting: Client Call (2:00 PM)');
 			// Should only appear once
 			expect((writtenContent.match(/Team Standup/g) || []).length).toBe(1);
 		});
@@ -238,9 +242,10 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(0);
 			expect(modifySpy).not.toHaveBeenCalled();
 		});
 
@@ -267,7 +272,7 @@ describe('Meeting Inserter', () => {
 		it('should preserve existing content in section', async () => {
 			// Arrange
 			const initialContent = `## Meetings
-- Meeting: Existing Meeting (9:00 AM)
+- [ ] Meeting: Existing Meeting (9:00 AM)
 
 ## Tasks
 `;
@@ -284,12 +289,13 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(1);
 			const writtenContent = modifySpy.mock.calls[0][1] as string;
-			expect(writtenContent).toContain('- Meeting: Existing Meeting (9:00 AM)');
-			expect(writtenContent).toContain('- Meeting: New Meeting (10:00 AM)');
+			expect(writtenContent).toContain('- [ ] Meeting: Existing Meeting (9:00 AM)');
+			expect(writtenContent).toContain('- [ ] Meeting: New Meeting (10:00 AM)');
 		});
 
 		it('should handle section with H1 heading', async () => {
@@ -308,9 +314,10 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(1);
 			expect(modifySpy).toHaveBeenCalled();
 		});
 
@@ -336,9 +343,10 @@ describe('Meeting Inserter', () => {
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(1);
 			expect(modifySpy).toHaveBeenCalled();
 		});
 
@@ -361,9 +369,10 @@ Some random text without proper formatting
 			const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
 
 			// Act
-			await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
+			const result = await insertMeetingsIntoNote(app, file, meetings, 'Meetings');
 
 			// Assert
+			expect(result).toBe(1);
 			expect(modifySpy).toHaveBeenCalled();
 		});
 	});

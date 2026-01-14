@@ -68,6 +68,10 @@ export class Workspace {
 	getLeaf(newLeaf?: boolean): WorkspaceLeaf {
 		return new WorkspaceLeaf();
 	}
+
+	getActiveFile(): TFile | null {
+		return null;
+	}
 }
 
 export class WorkspaceLeaf {}

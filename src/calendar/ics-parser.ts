@@ -148,6 +148,50 @@ export function getTodaysMeetings(events: IcsEvent[], targetDate?: Date): IcsEve
 }
 
 /**
+ * Sanitizes ICS content to fix common issues before parsing
+ * @param content - Raw ICS content
+ * @returns Sanitized ICS content
+ */
+function sanitizeIcsContent(content: string): string {
+	// Fix RRULE UNTIL dates that are not in UTC format
+	// The iCalendar spec (RFC 5545) requires UNTIL to be in UTC format (with Z suffix)
+	// However, some calendar providers send UNTIL without Z, which causes parsing errors
+
+	// Handle all variations of RRULE with UNTIL dates (DATE-TIME format: YYYYMMDDTHHmmss)
+	// Must handle: middle of line, end of line, with/without other parameters
+	let sanitized = content;
+
+	// Pattern 1: UNTIL with DATE-TIME followed by semicolon or newline (allow optional whitespace)
+	// Matches: UNTIL=20261231T235959; or UNTIL=20261231T235959 ; or UNTIL=20261231T235959\r\n
+	// Ensures we don't add Z if it's already there
+	sanitized = sanitized.replace(
+		/UNTIL=(\d{8}T\d{6})(?!Z)\s*([;\r\n])/g,
+		'UNTIL=$1Z$2'
+	);
+
+	// Pattern 2: UNTIL with DATE-TIME at end of line (with possible trailing whitespace)
+	sanitized = sanitized.replace(
+		/UNTIL=(\d{8}T\d{6})(?!Z)\s*$/gm,
+		'UNTIL=$1Z'
+	);
+
+	// Pattern 3: UNTIL with DATE format (YYYYMMDD only, no time) followed by delimiter
+	// Matches: UNTIL=20261231; or UNTIL=20261231\r\n
+	sanitized = sanitized.replace(
+		/UNTIL=(\d{8})(?![\dTZ])\s*([;\r\n])/g,
+		'UNTIL=$1Z$2'
+	);
+
+	// Pattern 4: UNTIL with DATE at end of line
+	sanitized = sanitized.replace(
+		/UNTIL=(\d{8})(?![\dTZ])\s*$/gm,
+		'UNTIL=$1Z'
+	);
+
+	return sanitized;
+}
+
+/**
  * Parses iCal content string and extracts calendar events
  *
  * @param content - Raw iCal content as string
@@ -173,8 +217,11 @@ export function parseIcsContent(content: string): IcsParseResult {
 	}
 
 	try {
+		// Sanitize the content to fix common issues
+		const sanitized = sanitizeIcsContent(content);
+
 		// Parse the ICS content
-		const parsed = ical.parseICS(content);
+		const parsed = ical.parseICS(sanitized);
 
 		// Extract events
 		const events: IcsEvent[] = [];

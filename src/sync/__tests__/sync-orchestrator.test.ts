@@ -25,8 +25,10 @@ describe('Sync Orchestrator', () => {
 		app = new App();
 		dailyNote = new TFile('2024-01-15.md');
 		settings = {
+			enableLocalCalendar: true,
 			icsFilePath: '/path/to/calendar.ics',
 			localCalendarSection: 'Local Meetings',
+			enableGoogleCalendar: true,
 			googleCalendarLink: 'https://calendar.google.com/calendar/ical/test',
 			googleCalendarSection: 'Google Meetings'
 		};
@@ -34,7 +36,10 @@ describe('Sync Orchestrator', () => {
 		// Default mocks
 		vi.spyOn(dailyNoteFinder, 'findOrCreateDailyNote').mockResolvedValue(dailyNote);
 		vi.spyOn(sectionCreator, 'ensureSectionExists').mockResolvedValue();
-		vi.spyOn(meetingInserter, 'insertMeetingsIntoNote').mockResolvedValue();
+		// Default: return 1 for each meeting passed
+		vi.spyOn(meetingInserter, 'insertMeetingsIntoNote').mockImplementation(async (app, file, meetings) => {
+			return meetings.length;
+		});
 	});
 
 	describe('syncMeetingsToDaily', () => {
@@ -348,6 +353,132 @@ describe('Sync Orchestrator', () => {
 			// Assert
 			expect(ensureSectionSpy).toHaveBeenCalledWith(app, dailyNote, 'Work Meetings', 2);
 			expect(ensureSectionSpy).toHaveBeenCalledWith(app, dailyNote, 'Personal Events', 2);
+		});
+	});
+
+	describe('Calendar Source Toggles', () => {
+		beforeEach(() => {
+			// Clear all mocks before each toggle test
+			vi.clearAllMocks();
+		});
+
+		it('should skip local calendar when disabled via toggle', async () => {
+			// Arrange
+			settings.enableLocalCalendar = false;  // Disabled via toggle
+			settings.icsFilePath = '/path/to/calendar.ics';  // But still configured
+			const googleMeetings = [
+				{
+					summary: 'Google Meeting',
+					start: new Date('2024-01-15T14:00:00'),
+					end: new Date('2024-01-15T15:00:00'),
+					isAllDay: false
+				}
+			];
+
+			vi.spyOn(icsParser, 'fetchAndParseGoogleCalendar').mockResolvedValue({
+				events: googleMeetings,
+				errors: []
+			});
+			vi.spyOn(icsParser, 'getTodaysMeetings').mockImplementation((events) => events);
+			const parseIcsSpy = vi.spyOn(icsParser, 'parseIcsFile');
+
+			// Act
+			const result = await syncMeetingsToDaily(app, settings);
+
+			// Assert
+			expect(result.success).toBe(true);
+			expect(result.localCalendar.enabled).toBe(false);
+			expect(result.googleCalendar.enabled).toBe(true);
+			expect(result.googleCalendar.success).toBe(true);
+			expect(parseIcsSpy).not.toHaveBeenCalled();  // Local calendar should not be accessed
+		});
+
+		it('should skip Google calendar when disabled via toggle', async () => {
+			// Arrange
+			settings.enableGoogleCalendar = false;  // Disabled via toggle
+			settings.googleCalendarLink = 'https://calendar.google.com/calendar/ical/test';  // But still configured
+			const localMeetings = [
+				{
+					summary: 'Local Meeting',
+					start: new Date('2024-01-15T10:00:00'),
+					end: new Date('2024-01-15T11:00:00'),
+					isAllDay: false
+				}
+			];
+
+			vi.spyOn(icsParser, 'parseIcsFile').mockResolvedValue({
+				events: localMeetings,
+				errors: []
+			});
+			vi.spyOn(icsParser, 'getTodaysMeetings').mockImplementation((events) => events);
+			const fetchGoogleSpy = vi.spyOn(icsParser, 'fetchAndParseGoogleCalendar');
+
+			// Act
+			const result = await syncMeetingsToDaily(app, settings);
+
+			// Assert
+			expect(result.success).toBe(true);
+			expect(result.localCalendar.enabled).toBe(true);
+			expect(result.localCalendar.success).toBe(true);
+			expect(result.googleCalendar.enabled).toBe(false);
+			expect(fetchGoogleSpy).not.toHaveBeenCalled();  // Google calendar should not be accessed
+		});
+
+		it('should throw error when both sources disabled via toggles', async () => {
+			// Arrange
+			settings.enableLocalCalendar = false;
+			settings.enableGoogleCalendar = false;
+			// Both have configuration but are disabled
+			settings.icsFilePath = '/path/to/calendar.ics';
+			settings.googleCalendarLink = 'https://calendar.google.com/calendar/ical/test';
+
+			// Act & Assert
+			await expect(syncMeetingsToDaily(app, settings)).rejects.toThrow(SyncError);
+			await expect(syncMeetingsToDaily(app, settings)).rejects.toThrow(
+				'No calendar sources configured'
+			);
+		});
+
+		it('should sync both sources when both enabled via toggles', async () => {
+			// Arrange
+			settings.enableLocalCalendar = true;
+			settings.enableGoogleCalendar = true;
+			const localMeetings = [
+				{
+					summary: 'Local Meeting',
+					start: new Date('2024-01-15T10:00:00'),
+					end: new Date('2024-01-15T11:00:00'),
+					isAllDay: false
+				}
+			];
+			const googleMeetings = [
+				{
+					summary: 'Google Meeting',
+					start: new Date('2024-01-15T14:00:00'),
+					end: new Date('2024-01-15T15:00:00'),
+					isAllDay: false
+				}
+			];
+
+			vi.spyOn(icsParser, 'parseIcsFile').mockResolvedValue({
+				events: localMeetings,
+				errors: []
+			});
+			vi.spyOn(icsParser, 'fetchAndParseGoogleCalendar').mockResolvedValue({
+				events: googleMeetings,
+				errors: []
+			});
+			vi.spyOn(icsParser, 'getTodaysMeetings').mockImplementation((events) => events);
+
+			// Act
+			const result = await syncMeetingsToDaily(app, settings);
+
+			// Assert
+			expect(result.success).toBe(true);
+			expect(result.localCalendar.enabled).toBe(true);
+			expect(result.localCalendar.success).toBe(true);
+			expect(result.googleCalendar.enabled).toBe(true);
+			expect(result.googleCalendar.success).toBe(true);
 		});
 	});
 

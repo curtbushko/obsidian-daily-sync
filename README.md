@@ -120,10 +120,39 @@ Most calendar applications can export to `.ics` format:
 5. Scroll to **Integrate calendar**
 6. Copy the **Secret address in iCal format** URL
 
-**URL Format**:
+**Accepted URL Formats**:
+
+The plugin accepts multiple Google Calendar URL formats:
+
+1. **Direct iCal URLs** (⭐ RECOMMENDED for private calendars):
 ```
-https://calendar.google.com/calendar/ical/[your-calendar-id]/public/basic.ics
+https://calendar.google.com/calendar/ical/[calendar-id]/private-[hash]/basic.ics
 ```
+- Find this in: Calendar Settings → Integrate calendar → "Secret address in iCal format"
+- Best for private calendars (includes secret access token)
+- Works reliably for both public and private calendars
+
+2. **Sharable embed URLs** (works for public calendars):
+```
+https://calendar.google.com/calendar/embed?src=[calendar-id]
+```
+- Find this when you click "Share" on a calendar
+- ⚠️ Only works for public calendars
+- For private calendars, use the iCal URL instead (#1)
+
+3. **Sharable URLs with base64-encoded ID**:
+```
+https://calendar.google.com/calendar/u/0?cid=[base64-encoded-id]
+```
+- Automatically decoded by the plugin
+- Same limitations as #2 (public calendars only)
+
+The plugin will automatically convert sharable URLs to the iCal format.
+
+**⚠️ Important for Private Calendars**:
+- If you see "Calendar not found" errors with sharable URLs, use the direct iCal URL (#1)
+- Sharable embed URLs don't include the secret token needed for private calendars
+- Go to Google Calendar → Settings → Your calendar → Integrate calendar → Copy "Secret address in iCal format"
 
 **Privacy Note**:
 - The iCal link provides read-only access to your calendar
@@ -133,9 +162,9 @@ https://calendar.google.com/calendar/ical/[your-calendar-id]/public/basic.ics
 - Revoke access anytime from Google Calendar settings
 
 **Tips**:
-- Test the link in a browser first - it should download an `.ics` file
-- For personal calendars, use the "Secret address" not "Public URL"
-- You can sync multiple calendars by creating separate Google Calendar shareable links
+- For personal/private calendars: Always use the "Secret address in iCal format" URL
+- Test direct iCal links in a browser first - they should download an `.ics` file
+- You can sync multiple calendars by using different URLs for each calendar
 
 ## Usage
 
@@ -334,9 +363,11 @@ All-day events are marked with `(All day)` instead of a time:
 **Problem**: Cannot fetch Google Calendar data.
 
 **Solutions**:
-- Verify the shareable link is correct (test it in a browser - should download `.ics`)
+- Verify the shareable link is correct
+  - Direct iCal URLs should download an `.ics` file when tested in a browser
+  - Sharable embed URLs (e.g., `calendar.google.com/calendar/embed?src=...`) are automatically converted
 - Check your internet connection
-- Ensure the link is the "iCal format" URL (ends with `.ics`)
+- Try using the direct iCal format URL from "Settings and sharing → Integrate calendar → Secret address in iCal format"
 - Try regenerating the shareable link in Google Calendar
 - Check if you're behind a firewall or proxy
 

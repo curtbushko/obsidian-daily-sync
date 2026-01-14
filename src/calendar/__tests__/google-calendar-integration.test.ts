@@ -102,6 +102,116 @@ END:VCALENDAR`;
 				expect(result.events[0].isAllDay).toBe(true);
 				expect(result.events[0].summary).toBe('Holiday');
 			});
+
+			it('should handle RRULE with UNTIL in non-UTC format', () => {
+				// Arrange - Google Calendar sometimes sends UNTIL without Z suffix
+				const recurringContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+BEGIN:VEVENT
+DTSTART:20260111T100000Z
+DTEND:20260111T110000Z
+RRULE:FREQ=WEEKLY;UNTIL=20261231T235959
+SUMMARY:Weekly Meeting
+UID:recurring@test.com
+END:VEVENT
+END:VCALENDAR`;
+
+				// Act
+				const result = parseIcsContent(recurringContent);
+
+				// Assert
+				expect(result.events).toHaveLength(1);
+				expect(result.events[0].summary).toBe('Weekly Meeting');
+			});
+
+			it('should handle RRULE with UNTIL in UTC format', () => {
+				// Arrange - Properly formatted UNTIL with Z suffix
+				const recurringContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+BEGIN:VEVENT
+DTSTART:20260111T100000Z
+DTEND:20260111T110000Z
+RRULE:FREQ=DAILY;UNTIL=20261231T235959Z
+SUMMARY:Daily Standup
+UID:recurring-utc@test.com
+END:VEVENT
+END:VCALENDAR`;
+
+				// Act
+				const result = parseIcsContent(recurringContent);
+
+				// Assert
+				expect(result.events).toHaveLength(1);
+				expect(result.events[0].summary).toBe('Daily Standup');
+			});
+
+			it('should handle RRULE with UNTIL at end of RRULE line', () => {
+				// Arrange - UNTIL is last parameter
+				const recurringContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+BEGIN:VEVENT
+DTSTART:20260111T100000Z
+DTEND:20260111T110000Z
+RRULE:FREQ=MONTHLY;INTERVAL=2;UNTIL=20270630T235959
+SUMMARY:Bi-monthly Review
+UID:recurring-end@test.com
+END:VEVENT
+END:VCALENDAR`;
+
+				// Act
+				const result = parseIcsContent(recurringContent);
+
+				// Assert
+				expect(result.events).toHaveLength(1);
+				expect(result.events[0].summary).toBe('Bi-monthly Review');
+			});
+
+			it('should handle RRULE with UNTIL followed by COUNT', () => {
+				// Arrange - UNTIL in middle of parameters
+				const recurringContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+BEGIN:VEVENT
+DTSTART:20260111T100000Z
+DTEND:20260111T110000Z
+RRULE:FREQ=WEEKLY;UNTIL=20261231T120000;BYDAY=MO,WE,FR
+SUMMARY:Workout Sessions
+UID:recurring-middle@test.com
+END:VEVENT
+END:VCALENDAR`;
+
+				// Act
+				const result = parseIcsContent(recurringContent);
+
+				// Assert
+				expect(result.events).toHaveLength(1);
+				expect(result.events[0].summary).toBe('Workout Sessions');
+			});
+
+			it('should handle RRULE with UNTIL using DATE format (no time)', () => {
+				// Arrange - UNTIL with just date, no time component
+				const recurringContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260111
+DTEND;VALUE=DATE:20260112
+RRULE:FREQ=YEARLY;UNTIL=20301231
+SUMMARY:Annual Holiday
+UID:recurring-date@test.com
+END:VEVENT
+END:VCALENDAR`;
+
+				// Act
+				const result = parseIcsContent(recurringContent);
+
+				// Assert
+				expect(result.events).toHaveLength(1);
+				expect(result.events[0].summary).toBe('Annual Holiday');
+			});
 		});
 
 		describe('when handling invalid content', () => {

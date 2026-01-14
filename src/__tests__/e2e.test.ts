@@ -53,8 +53,10 @@ describe('End-to-End Integration Tests', () => {
 
 		// Default settings
 		settings = {
+			enableLocalCalendar: true,
 			icsFilePath: join(__dirname, 'fixtures', 'sample-calendar.ics'),
 			localCalendarSection: 'Meetings',
+			enableGoogleCalendar: true,
 			googleCalendarLink: '',
 			googleCalendarSection: 'Google Meetings'
 		};
@@ -164,7 +166,7 @@ Some notes here.
 			// Manually add a new meeting to daily note
 			dailyNoteContent = dailyNoteContent.replace(
 				'## Meetings\n',
-				'## Meetings\n- Meeting: New Ad-hoc Meeting (3:00 PM)\n'
+				'## Meetings\n- [ ] Meeting: New Ad-hoc Meeting (3:00 PM)\n'
 			);
 
 			// Act - Second sync (simulating calendar unchanged)

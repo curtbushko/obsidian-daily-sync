@@ -18,7 +18,7 @@ export function getAllDailyNotes(): Record<string, TFile> {
 }
 
 export function getDailyNote(date: Moment, allDailyNotes: Record<string, TFile>): TFile | null {
-	const dateStr = date.format('YYYY-MM-DD');
+	const dateStr = date.format('YYYYMMDD');
 	return allDailyNotes[dateStr] || null;
 }
 
@@ -26,7 +26,7 @@ export async function createDailyNote(date: Moment): Promise<TFile> {
 	if (mockCreateShouldFail) {
 		throw new Error('Failed to create daily note: Permission denied');
 	}
-	const dateStr = date.format('YYYY-MM-DD');
+	const dateStr = date.format('YYYYMMDD');
 	const file = new TFile(`Daily Notes/${dateStr}.md`);
 	mockDailyNotes[dateStr] = file;
 	return file;
