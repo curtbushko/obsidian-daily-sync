@@ -61,6 +61,7 @@ function hasRecurrenceRule(event: VEvent): boolean {
 
 /**
  * Expands a recurring event into individual occurrences within a date range.
+ * Also handles recurrence exceptions (modified occurrences) stored in event.recurrences.
  *
  * @param event - The VEvent with an RRULE
  * @param rangeStart - Start of the date range to expand
@@ -72,6 +73,24 @@ function expandRecurringEvent(event: VEvent, rangeStart: Date, rangeEnd: Date): 
 
 	if (!event.rrule) {
 		return expandedEvents;
+	}
+
+	// Get recurrence exceptions (modified occurrences) from node-ical
+	// These are stored as event.recurrences keyed by original occurrence date
+	const eventWithRecurrences = event as unknown as {
+		recurrences?: Record<string, VEvent>;
+		exdate?: Record<string, Date>;
+	};
+	const recurrences = eventWithRecurrences.recurrences || {};
+	const exdates = eventWithRecurrences.exdate || {};
+
+	// Build a set of dates that have been modified or excluded
+	const modifiedDates = new Set<string>();
+	for (const dateKey in recurrences) {
+		modifiedDates.add(dateKey);
+	}
+	for (const dateKey in exdates) {
+		modifiedDates.add(dateKey);
 	}
 
 	try {
@@ -86,8 +105,18 @@ function expandRecurringEvent(event: VEvent, rangeStart: Date, rangeEnd: Date): 
 		const isAllDay = isAllDayEvent(event);
 		const summary = event.summary || '';
 
-		// Create an IcsEvent for each occurrence
+		// Create an IcsEvent for each occurrence (excluding modified/excluded ones)
 		for (const occurrence of occurrences) {
+			// Generate date key in YYYY-MM-DD format to match node-ical's recurrences keys
+			const isoString = occurrence.toISOString();
+			const dateKey = isoString.split('T')[0] || isoString;
+
+			// Skip if this occurrence has been modified (will be added from recurrences)
+			// or excluded (EXDATE)
+			if (modifiedDates.has(dateKey)) {
+				continue;
+			}
+
 			const occurrenceEnd = new Date(occurrence.getTime() + duration);
 
 			expandedEvents.push({
@@ -98,7 +127,34 @@ function expandRecurringEvent(event: VEvent, rangeStart: Date, rangeEnd: Date): 
 			});
 		}
 
-		debugLog('Expanded recurring event:', summary, '- found', occurrences.length, 'occurrences in range');
+		// Add recurrence exceptions (modified occurrences)
+		// These may have different start times or other modifications
+		for (const dateKey in recurrences) {
+			const recurrence = recurrences[dateKey];
+			if (!recurrence) continue;
+
+			const recStart = recurrence.start;
+			const recEnd = recurrence.end || new Date(recStart.getTime() + duration);
+
+			// Check if this recurrence falls within our date range
+			if (recStart >= rangeStart && recStart <= rangeEnd) {
+				const recIsAllDay = isAllDayEvent(recurrence);
+				const recSummary = recurrence.summary || summary;
+
+				expandedEvents.push({
+					summary: recSummary,
+					start: recStart,
+					end: recEnd,
+					isAllDay: recIsAllDay
+				});
+
+				debugLog('Added recurrence exception:', recSummary, 'on', recStart.toISOString());
+			}
+		}
+
+		const recurrenceCount = Object.keys(recurrences).length;
+		debugLog('Expanded recurring event:', summary, '- found', expandedEvents.length, 'occurrences in range',
+			recurrenceCount > 0 ? `(including ${recurrenceCount} recurrence exceptions)` : '');
 	} catch (error) {
 		debugLog('Failed to expand recurring event:', event.summary, error);
 	}
@@ -112,12 +168,15 @@ function expandRecurringEvent(event: VEvent, rangeStart: Date, rangeEnd: Date): 
 function isAllDayEvent(event: VEvent): boolean {
 	// All-day events have dates without time components
 	// They are typically marked with VALUE=DATE in the ICS file
-	// node-ical might preserve datetype metadata
+	// node-ical sets datetype to 'date' for all-day events
 	const eventWithMetadata = event as unknown as { datetype?: string };
-	const startWithMetadata = event.start as unknown as { tz?: string };
 
-	return eventWithMetadata.datetype === 'date' ||
-	       startWithMetadata.tz === undefined;
+	// The datetype property is the reliable indicator from node-ical
+	// 'date' = all-day event (no time component in ICS)
+	// 'date-time' = timed event
+	// Note: We should NOT fall back to checking tz === undefined,
+	// as many local calendar apps export timed events without timezone info
+	return eventWithMetadata.datetype === 'date';
 }
 
 /**
