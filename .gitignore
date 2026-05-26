@@ -33,3 +33,4 @@ coverage
 calendar_export.ics
 
 dist/
+.trash/
