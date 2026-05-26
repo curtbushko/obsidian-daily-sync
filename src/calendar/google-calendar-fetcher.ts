@@ -1,15 +1,22 @@
 import { requestUrl } from 'obsidian';
 
-// Check if we're in a Node.js environment (CLI mode)
+// Check if we're in a test environment (vitest)
 // eslint-disable-next-line no-undef
-const isNodeJS = typeof process !== 'undefined' && process.versions && process.versions.node;
+const isTest = typeof process !== 'undefined' && (process.env.VITEST === 'true' || process.env.NODE_ENV === 'test');
+
+// Check if we're in a Node.js CLI environment (not test, not browser)
+// eslint-disable-next-line no-undef
+const isNodeJS = !isTest && typeof process !== 'undefined' && process.versions && process.versions.node;
 
 /**
  * Fetch wrapper that works in both Obsidian and Node.js environments
+ * In tests, always use requestUrl (which is mocked)
+ * In Node.js CLI, use native fetch
+ * In Obsidian, use requestUrl
  */
 async function universalFetch(url: string): Promise<{ text: string; status?: number }> {
 	if (isNodeJS) {
-		// Use Node.js fetch (available in Node 18+)
+		// Use Node.js fetch (available in Node 18+) for CLI
 		// eslint-disable-next-line no-restricted-globals
 		const response = await fetch(url);
 		if (!response.ok) {
@@ -19,7 +26,7 @@ async function universalFetch(url: string): Promise<{ text: string; status?: num
 		}
 		return { text: await response.text(), status: response.status };
 	} else {
-		// Use Obsidian's requestUrl
+		// Use Obsidian's requestUrl (in Obsidian or tests with mock)
 		const response = await requestUrl({ url, method: 'GET' });
 		return { text: response.text, status: response.status };
 	}
