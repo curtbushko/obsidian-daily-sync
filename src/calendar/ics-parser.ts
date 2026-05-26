@@ -1,5 +1,9 @@
 import { App } from 'obsidian';
-import * as ical from 'node-ical';
+import * as icalImport from 'node-ical';
+
+// Handle both CommonJS and ESM imports of node-ical
+const ical = (icalImport as any).default || icalImport;
+
 import { VEvent } from 'node-ical';
 // eslint-disable-next-line import/no-nodejs-modules
 import { readFile } from 'node:fs/promises';

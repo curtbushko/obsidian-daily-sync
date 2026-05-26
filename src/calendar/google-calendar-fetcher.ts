@@ -1,5 +1,28 @@
 import { requestUrl } from 'obsidian';
 
+// Check if we're in a Node.js environment (CLI mode)
+const isNodeJS = typeof process !== 'undefined' && process.versions && process.versions.node;
+
+/**
+ * Fetch wrapper that works in both Obsidian and Node.js environments
+ */
+async function universalFetch(url: string): Promise<{ text: string; status?: number }> {
+	if (isNodeJS) {
+		// Use Node.js fetch (available in Node 18+)
+		const response = await fetch(url);
+		if (!response.ok) {
+			const error = new Error(`HTTP ${response.status}`) as Error & { status: number };
+			error.status = response.status;
+			throw error;
+		}
+		return { text: await response.text(), status: response.status };
+	} else {
+		// Use Obsidian's requestUrl
+		const response = await requestUrl({ url, method: 'GET' });
+		return { text: response.text, status: response.status };
+	}
+}
+
 /**
  * Result of fetching a Google Calendar
  */
@@ -167,11 +190,8 @@ export async function fetchGoogleCalendar(url: string): Promise<FetchCalendarRes
 	const wasConverted = icalUrl !== url;
 
 	try {
-		// Fetch the calendar using Obsidian's requestUrl
-		const response = await requestUrl({
-			url: icalUrl,
-			method: 'GET'
-		});
+		// Fetch the calendar using universal fetch (works in both Obsidian and CLI)
+		const response = await universalFetch(icalUrl);
 
 		// Get the text content
 		const content = response.text;

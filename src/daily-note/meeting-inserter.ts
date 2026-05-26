@@ -52,12 +52,14 @@ export class MeetingInsertionError extends Error {
  * ```
  */
 export function formatMeeting(meeting: IcsEvent): string {
+	const summary = meeting.summary.trim();
+
 	if (meeting.isAllDay) {
-		return `- [ ] Meeting: ${meeting.summary} (All day)`;
+		return `- [ ] Meeting: ${summary} (All day)`;
 	}
 
 	const time = formatTime(meeting.start);
-	return `- [ ] Meeting: ${meeting.summary} (${time})`;
+	return `- [ ] Meeting: ${summary} (${time})`;
 }
 
 /**
