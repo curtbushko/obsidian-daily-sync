@@ -79,8 +79,9 @@ async function ensureDailyNote(notePath: string, date: Date): Promise<void> {
 	const dayNum = date.getDate();
 	const year = date.getFullYear();
 	const monthTag = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-	const timestamp = date.toISOString().split('T')[0] + ' ' +
-	                 new Date().toTimeString().split(' ')[0].substring(0, 5);
+	const datePart = date.toISOString().split('T')[0];
+	const timePart = new Date().toTimeString().split(' ')[0];
+	const timestamp = `${datePart ?? ''} ${timePart?.substring(0, 5) ?? ''}`;
 
 	const content = `---
 title: ${monthName} ${dayNum}, ${year}
@@ -126,7 +127,8 @@ function findSection(content: string, sectionName: string): { start: number; end
 	// Find next section or end of file
 	let endIdx = lines.length;
 	for (let i = startIdx + 1; i < lines.length; i++) {
-		if (lines[i].startsWith('# ')) {
+		const line = lines[i];
+		if (line && line.startsWith('# ')) {
 			endIdx = i;
 			break;
 		}
@@ -179,7 +181,7 @@ async function insertMeetings(
 			.filter(line => line.includes('Meeting:'))
 			.map(line => {
 				const match = line.match(/Meeting: ([^(]+)/);
-				return match ? match[1].trim() : '';
+				return match?.[1]?.trim() ?? '';
 			})
 	);
 
@@ -290,15 +292,17 @@ async function main() {
 		]);
 
 		// Report results
-		const [localResult, googleResult] = results.map(r =>
+		const mappedResults = results.map(r =>
 			r.status === 'fulfilled' ? r.value : { success: false, meetingsAdded: 0, error: 'Failed' }
 		);
+		const localResult = mappedResults[0];
+		const googleResult = mappedResults[1];
 
 		console.log('\n✓ Sync complete');
-		if (config.enableLocalCalendar) {
+		if (config.enableLocalCalendar && localResult) {
 			console.log(`  Local calendar: ${localResult.meetingsAdded} meeting(s) added`);
 		}
-		if (config.enableGoogleCalendar) {
+		if (config.enableGoogleCalendar && googleResult) {
 			console.log(`  Google calendar: ${googleResult.meetingsAdded} meeting(s) added`);
 		}
 
@@ -312,7 +316,8 @@ async function main() {
 // Run if called directly
 if (import.meta.url.startsWith('file:')) {
 	const modulePath = new URL(import.meta.url).pathname;
-	const isMain = process.argv[1] === modulePath || process.argv[1].endsWith('/cli.js');
+	const scriptPath = process.argv[1];
+	const isMain = scriptPath && (scriptPath === modulePath || scriptPath.endsWith('/cli.js'));
 	if (isMain) {
 		main();
 	}

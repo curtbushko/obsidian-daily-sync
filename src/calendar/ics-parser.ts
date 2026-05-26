@@ -4,7 +4,7 @@ import * as icalImport from 'node-ical';
 // Handle both CommonJS and ESM imports of node-ical
 const ical = (icalImport as any).default || icalImport;
 
-import { VEvent } from 'node-ical';
+import { VEvent, CalendarComponent } from 'node-ical';
 // eslint-disable-next-line import/no-nodejs-modules
 import { readFile } from 'node:fs/promises';
 import { fetchGoogleCalendar } from './google-calendar-fetcher';
@@ -52,7 +52,7 @@ export class IcsParseError extends Error {
 /**
  * Type guard to check if a calendar component is a VEvent
  */
-function isVEvent(component: ical.CalendarComponent): component is VEvent {
+function isVEvent(component: CalendarComponent): component is VEvent {
 	return component.type === 'VEVENT';
 }
 
