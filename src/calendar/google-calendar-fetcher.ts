@@ -1,6 +1,7 @@
 import { requestUrl } from 'obsidian';
 
 // Check if we're in a Node.js environment (CLI mode)
+// eslint-disable-next-line no-undef
 const isNodeJS = typeof process !== 'undefined' && process.versions && process.versions.node;
 
 /**
@@ -9,6 +10,7 @@ const isNodeJS = typeof process !== 'undefined' && process.versions && process.v
 async function universalFetch(url: string): Promise<{ text: string; status?: number }> {
 	if (isNodeJS) {
 		// Use Node.js fetch (available in Node 18+)
+		// eslint-disable-next-line no-restricted-globals
 		const response = await fetch(url);
 		if (!response.ok) {
 			const error = new Error(`HTTP ${response.status}`) as Error & { status: number };

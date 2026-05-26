@@ -2,7 +2,7 @@
  * End-to-End Integration Tests
  * Tests complete user workflows with minimal mocking
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, TFile, moment } from '../__mocks__/obsidian';
 import { syncMeetingsToDaily } from '../sync/sync-orchestrator';
 import type { DailySyncSettings } from '../settings';
@@ -26,8 +26,12 @@ describe('End-to-End Integration Tests', () => {
 	let dailyNote: TFile;
 
 	beforeEach(() => {
+		// Mock the system time to match fixture dates (January 15, 2026)
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-01-15T12:00:00Z'));
+
 		app = new App();
-		dailyNote = new TFile('2026-01-14.md');
+		dailyNote = new TFile('2026-01-15.md');
 
 		// Reset daily notes mock
 		resetMocks();
@@ -63,6 +67,11 @@ describe('End-to-End Integration Tests', () => {
 			googleCalendarIgnore: '',
 			enableDebugLogging: false
 		};
+	});
+
+	afterEach(() => {
+		// Restore real timers
+		vi.useRealTimers();
 	});
 
 	describe('Full Sync Workflow', () => {

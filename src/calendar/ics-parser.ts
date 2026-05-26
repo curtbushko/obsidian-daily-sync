@@ -2,9 +2,10 @@ import { App } from 'obsidian';
 import * as icalImport from 'node-ical';
 
 // Handle both CommonJS and ESM imports of node-ical
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 const ical = (icalImport as any).default || icalImport;
 
-import { VEvent, CalendarComponent } from 'node-ical';
+import { VEvent, CalendarComponent, CalendarResponse } from 'node-ical';
 // eslint-disable-next-line import/no-nodejs-modules
 import { readFile } from 'node:fs/promises';
 import { fetchGoogleCalendar } from './google-calendar-fetcher';
@@ -424,7 +425,8 @@ export function parseIcsContent(content: string): IcsParseResult {
 		const sanitized = sanitizeIcsContent(content);
 
 		// Parse the ICS content
-		const parsed = ical.parseICS(sanitized);
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+		const parsed = ical.parseICS(sanitized) as CalendarResponse;
 
 		// Define date range for expanding recurring events
 		// Use 1 year before and after today to catch relevant recurrences
@@ -437,7 +439,7 @@ export function parseIcsContent(content: string): IcsParseResult {
 		let recurringCount = 0;
 
 		for (const key in parsed) {
-			const component = parsed[key];
+			const component: CalendarComponent | undefined = parsed[key];
 
 			// Only process VEVENT components
 			if (component && isVEvent(component)) {

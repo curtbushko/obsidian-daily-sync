@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fetchAndParseGoogleCalendar, parseIcsContent, IcsParseResult, IcsParseError } from '../ics-parser';
 import { GoogleCalendarFetchError } from '../google-calendar-fetcher';
 import { mockRequestUrl, resetRequestUrlMock, RequestUrlResponse } from 'obsidian';
@@ -33,10 +33,14 @@ END:VEVENT
 END:VCALENDAR`;
 
 	beforeEach(() => {
+		// Mock the system time to match test dates (January 11, 2026)
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-01-11T12:00:00Z'));
 		resetRequestUrlMock();
 	});
 
 	afterEach(() => {
+		vi.useRealTimers();
 		resetRequestUrlMock();
 	});
 

@@ -36,6 +36,7 @@ export default tseslint.config(
 		"dist",
 		"scripts",
 		"esbuild.config.mjs",
+		"esbuild.cli.mjs",
 		"eslint.config.js",
 		"version-bump.mjs",
 		"versions.json",
@@ -45,5 +46,7 @@ export default tseslint.config(
 		"**/*.test.ts",
 		"vitest.config.ts",
 		"coverage",
+		".trash/**",
+		"src/cli.ts",
 	]),
 );
