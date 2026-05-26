@@ -64,6 +64,13 @@ function hasRecurrenceRule(event: VEvent): boolean {
 }
 
 /**
+ * Checks if an event is cancelled
+ */
+function isEventCancelled(event: VEvent): boolean {
+	return event.status === 'CANCELLED';
+}
+
+/**
  * Expands a recurring event into individual occurrences within a date range.
  * Also handles recurrence exceptions (modified occurrences) stored in event.recurrences.
  *
@@ -76,6 +83,12 @@ function expandRecurringEvent(event: VEvent, rangeStart: Date, rangeEnd: Date): 
 	const expandedEvents: IcsEvent[] = [];
 
 	if (!event.rrule) {
+		return expandedEvents;
+	}
+
+	// Skip cancelled recurring series entirely
+	if (isEventCancelled(event)) {
+		debugLog('Skipping cancelled recurring series:', event.summary);
 		return expandedEvents;
 	}
 
@@ -136,6 +149,12 @@ function expandRecurringEvent(event: VEvent, rangeStart: Date, rangeEnd: Date): 
 		for (const dateKey in recurrences) {
 			const recurrence = recurrences[dateKey];
 			if (!recurrence) continue;
+
+			// Skip cancelled recurrence exceptions
+			if (isEventCancelled(recurrence)) {
+				debugLog('Skipping cancelled recurrence exception:', recurrence.summary || summary, 'on', dateKey);
+				continue;
+			}
 
 			const recStart = recurrence.start;
 			const recEnd = recurrence.end || new Date(recStart.getTime() + duration);
@@ -422,6 +441,12 @@ export function parseIcsContent(content: string): IcsParseResult {
 
 			// Only process VEVENT components
 			if (component && isVEvent(component)) {
+				// Skip cancelled events (applies to both recurring and non-recurring)
+				if (isEventCancelled(component)) {
+					debugLog('Skipping cancelled event:', component.summary);
+					continue;
+				}
+
 				// Check if this is a recurring event
 				if (hasRecurrenceRule(component)) {
 					// Expand recurring event into individual occurrences
