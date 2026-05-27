@@ -1,4 +1,4 @@
-.PHONY: help install build dev test lint lint-fix clean validate-build
+.PHONY: help install build dev test lint lint-fix clean validate-build dist
 
 # Default target
 help:
@@ -10,6 +10,7 @@ help:
 	@echo "  make lint          - Run ESLint to check code quality"
 	@echo "  make lint-fix      - Run ESLint and automatically fix issues"
 	@echo "  make validate-build - Validate build outputs"
+	@echo "  make dist          - Create distribution directory for release"
 	@echo "  make clean         - Remove build artifacts and node_modules"
 
 # Install dependencies
@@ -41,8 +42,19 @@ lint-fix:
 validate-build:
 	@node scripts/validate-build.mjs
 
+# Create distribution directory
+dist: build
+	@echo "Creating distribution package..."
+	@npm run build:cli
+	@cp manifest.json dist/
+	@cp styles.css dist/
+	@echo "Distribution created in dist/ directory"
+	@ls -lh dist/
+
 # Clean build artifacts
 clean:
-	rm -rf node_modules
-	rm -f main.js
-	rm -f *.map
+	@mkdir -p .trash
+	@grep -q "^\.trash/$$" .gitignore 2>/dev/null || echo ".trash/" >> .gitignore
+	@[ -d node_modules ] && mv node_modules .trash/ || true
+	@[ -d dist ] && mv dist .trash/ || true
+	@find . -maxdepth 1 -name "*.map" -exec mv {} .trash/ \;

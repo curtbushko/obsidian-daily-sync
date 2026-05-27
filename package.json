@@ -2,7 +2,7 @@
 	"name": "obsidian-daily-sync",
 	"version": "1.0.0",
 	"description": "Import daily meetings from local .ics calendar files and Google Calendar into your daily notes",
-	"main": "main.js",
+	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

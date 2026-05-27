@@ -6,17 +6,21 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 
-const REQUIRED_FILES = ['main.js', 'manifest.json', 'styles.css'];
+const REQUIRED_FILES = [
+	{ path: 'dist/main.js', display: 'dist/main.js' },
+	{ path: 'manifest.json', display: 'manifest.json' },
+	{ path: 'styles.css', display: 'styles.css' }
+];
 const errors = [];
 
 console.log(' Validating build outputs...\n');
 
 // Check required files exist
 for (const file of REQUIRED_FILES) {
-	if (!existsSync(file)) {
-		errors.push(`✗ Missing required file: ${file}`);
+	if (!existsSync(file.path)) {
+		errors.push(`✗ Missing required file: ${file.display}`);
 	} else {
-		console.log(`✓ Found ${file}`);
+		console.log(`✓ Found ${file.display}`);
 	}
 }
 
@@ -44,11 +48,11 @@ try {
 
 // Check main.js is not empty
 try {
-	const mainJs = readFileSync('main.js', 'utf-8');
+	const mainJs = readFileSync('dist/main.js', 'utf-8');
 	if (mainJs.length < 100) {
-		errors.push(`✗ main.js seems too small (${mainJs.length} bytes)`);
+		errors.push(`✗ dist/main.js seems too small (${mainJs.length} bytes)`);
 	} else {
-		console.log(`✓ main.js is properly generated (${mainJs.length} bytes)`);
+		console.log(`✓ dist/main.js is properly generated (${mainJs.length} bytes)`);
 	}
 } catch {
 	// File doesn't exist - already caught above

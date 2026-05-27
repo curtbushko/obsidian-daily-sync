@@ -6,7 +6,7 @@ esbuild.build({
 	platform: 'node',
 	target: 'node18',
 	format: 'esm',
-	outfile: 'dist/cli.mjs',
+	outfile: 'dist/cli.js',
 	banner: {
 		js: '#!/usr/bin/env node\nimport { createRequire } from "module";\nconst require = createRequire(import.meta.url);\n'
 	},
