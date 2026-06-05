@@ -15,6 +15,7 @@ interface CLIConfig {
 	vaultPath: string;
 	dailyNotesFolder: string;
 	dailyNotesFormat: string;
+	dailyTemplateFile: string;
 	enableLocalCalendar: boolean;
 	icsFilePath: string;
 	localCalendarSection: string;
@@ -37,6 +38,7 @@ async function loadConfig(configPath: string): Promise<CLIConfig> {
 	config.vaultPath = config.vaultPath || process.cwd();
 	config.dailyNotesFolder = config.dailyNotesFolder || 'daily';
 	config.dailyNotesFormat = config.dailyNotesFormat || 'YYYYMMDD';
+	config.dailyTemplateFile = config.dailyTemplateFile || 'templates/daily.md';
 
 	return config;
 }
@@ -64,9 +66,34 @@ function getDailyNotePath(config: CLIConfig, date: Date): string {
 }
 
 /**
+ * Process template variables
+ */
+function processTemplate(template: string, date: Date): string {
+	const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+	const monthNameShort = date.toLocaleDateString('en-US', { month: 'short' });
+	const dayNum = date.getDate();
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+
+	const datePart = date.toISOString().split('T')[0] ?? '';
+	const timePart = new Date().toTimeString().split(' ')[0] ?? '';
+	const timeOnly = timePart.substring(0, 5);
+
+	return template
+		.replace(/\{\{date:MMMM\}\}/g, monthName)
+		.replace(/\{\{date:MMM\}\}/g, monthNameShort)
+		.replace(/\{\{date:MM\}\}/g, month)
+		.replace(/\{\{date:DD\}\}/g, day)
+		.replace(/\{\{date:YYYY\}\}/g, String(year))
+		.replace(/\{\{date\}\}/g, datePart)
+		.replace(/\{\{time\}\}/g, timeOnly);
+}
+
+/**
  * Ensure daily note exists
  */
-async function ensureDailyNote(notePath: string, date: Date): Promise<void> {
+async function ensureDailyNote(config: CLIConfig, notePath: string, date: Date): Promise<void> {
 	if (existsSync(notePath)) {
 		return;
 	}
@@ -74,39 +101,41 @@ async function ensureDailyNote(notePath: string, date: Date): Promise<void> {
 	// Create directory if needed
 	await mkdir(dirname(notePath), { recursive: true });
 
-	// Create basic daily note content
-	const monthName = date.toLocaleDateString('en-US', { month: 'long' });
-	const dayNum = date.getDate();
-	const year = date.getFullYear();
-	const monthTag = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-	const datePart = date.toISOString().split('T')[0];
-	const timePart = new Date().toTimeString().split(' ')[0];
-	const timestamp = `${datePart ?? ''} ${timePart?.substring(0, 5) ?? ''}`;
+	// Load and process template
+	const templatePath = join(config.vaultPath, config.dailyTemplateFile);
+	let content: string;
 
-	const content = `---
+	if (existsSync(templatePath)) {
+		debugLog('Using template:', templatePath);
+		const template = await readFile(templatePath, 'utf-8');
+		content = processTemplate(template, date);
+	} else {
+		debugLog('Template not found, using default content');
+		// Fallback to minimal content if template doesn't exist
+		const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+		const dayNum = date.getDate();
+		const year = date.getFullYear();
+		const monthTag = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+		const datePart = date.toISOString().split('T')[0] ?? '';
+		const timePart = new Date().toTimeString().split(' ')[0] ?? '';
+		const timestamp = `${datePart} ${timePart.substring(0, 5)}`;
+
+		content = `---
 title: ${monthName} ${dayNum}, ${year}
 date:  ${timestamp}
 tags:
   - daily
   - ${monthTag}
 ---
-# WORK
+# MEETINGS
+
+# TASKS
 
 # FAMILY
 
 # PERSONAL
-
-- Daily Codwars/Exercism/LC
-- Exercise
-
-# TWO GOOD THINGS THAT HAPPENED
-
-"Don't make the same decision twice. Spend time and thought to make a solid decision the first time so that you don't revisit the issue unnecessarily." — Bill Gates
-
-"He who every morning plans the transactions of that day and follows that plan carries a thread that will guide him through the labyrinth of the most busy life." ― Victor Hugo
-
-"We all sorely complain of the shortness of time, and yet have much more than we know what to do with. Our lives are either spent in doing nothing at all, or in doing nothing to the purpose, or in doing nothing that we ought to do. We are always complaining that our days are few, and acting as though there would be no end of them." — Seneca
 `;
+	}
 
 	await writeFile(notePath, content, 'utf-8');
 	debugLog('Created daily note:', notePath);
@@ -279,7 +308,7 @@ async function main() {
 		debugLog('Date:', today.toLocaleDateString());
 
 		// Ensure daily note exists
-		await ensureDailyNote(notePath, today);
+		await ensureDailyNote(config, notePath, today);
 
 		// Sync calendars
 		const results = await Promise.allSettled([

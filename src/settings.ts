@@ -40,6 +40,8 @@ export function resetElectronForTesting(): void {
  * Plugin settings interface
  */
 export interface DailySyncSettings {
+	/** Path to daily note template file */
+	dailyTemplateFile: string;
 	/** Enable/disable local calendar sync */
 	enableLocalCalendar: boolean;
 	/** Path to local .ics calendar file */
@@ -61,6 +63,7 @@ export interface DailySyncSettings {
 }
 
 export const DEFAULT_SETTINGS: DailySyncSettings = {
+	dailyTemplateFile: 'templates/daily.md',
 	enableLocalCalendar: true,
 	icsFilePath: '',
 	localCalendarSection: 'Meetings',
@@ -201,6 +204,17 @@ export class DailySyncSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Advanced')
 			.setHeading();
+
+		new Setting(containerEl)
+			.setName('Daily template file')
+			.setDesc('Path to template file for new daily notes (relative to vault root). Example: templates/daily.md')
+			.addText(text => text
+				.setValue(this.plugin.settings.dailyTemplateFile)
+				.setPlaceholder('templates/daily.md')
+				.onChange(async (value) => {
+					this.plugin.settings.dailyTemplateFile = value || 'templates/daily.md';
+					await this.plugin.saveSettings();
+				}));
 
 		new Setting(containerEl)
 			.setName('Enable debug logging')
