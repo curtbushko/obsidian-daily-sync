@@ -225,8 +225,20 @@ async function insertMeetings(
 	// Format new meetings
 	const meetingLines = newMeetings.map(formatMeeting);
 
-	// Insert after section header
-	lines.splice(section.start + 1, 0, ...meetingLines);
+	// Find insertion point (after section header and any blank line)
+	let insertIdx = section.start + 1;
+
+	// If there's a blank line after the header, insert after it
+	if (insertIdx < lines.length && lines[insertIdx]?.trim() === '') {
+		insertIdx++;
+	} else {
+		// No blank line exists, add one before the meetings
+		lines.splice(section.start + 1, 0, '');
+		insertIdx = section.start + 2;
+	}
+
+	// Insert meetings at the correct position
+	lines.splice(insertIdx, 0, ...meetingLines);
 
 	// Write back
 	await writeFile(notePath, lines.join('\n'), 'utf-8');
